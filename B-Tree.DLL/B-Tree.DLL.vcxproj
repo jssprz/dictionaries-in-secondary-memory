@@ -139,6 +139,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="b-tree-node.h" />
+    <ClInclude Include="b-tree.h" />
+    <ClInclude Include="key.h" />
+    <ClInclude Include="record.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="b-tree-node.cpp" />
+    <ClCompile Include="b-tree.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,11 +1,13 @@
 ﻿#pragma once
 
-template <typename K, typename R, int B>
+template <typename K, typename R>
 struct BTreeNode {
 	// data members:
 	int count;
-	K data[B-1];
-	BTreeNode<K, R, B> *branch[B];
+	K *data;
+	BTreeNode<K, R> **branch;
 	// constructor:
-	BTreeNode();
+	BTreeNode(int branchingFactor);
+	// destructor
+	~BTreeNode();
 };

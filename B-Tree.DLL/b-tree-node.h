@@ -19,7 +19,7 @@ public:
 	}
 
 	// data members:
-	int count;
+	size_t count;
 	K *data;
 	BTreeNode<K, R> **branch;
 	

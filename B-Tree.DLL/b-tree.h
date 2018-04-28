@@ -1,8 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include "b-tree-node.h"
 #include "error-code.h"
-#include <fstream>
 
 template <typename K, typename R>
 class BTree {
@@ -19,7 +18,24 @@ public:
 	Error_code search(R &target){
 		return recursive_search_tree(root, target);
 	}
-	void insert(const R &new_entry){}
+
+	void insert(const R &new_entry){
+		R median;
+		Node *right_branch, *new_root;
+		Error_code result = push_down(root, new_entry, median, right_branch);
+		if (result == overflow) { // The whole tree grows in height.
+								  // Make a brand new root for the whole B-tree.
+			new_root = new B_node<Record, order>;
+			new_root->count = 1;
+			new_root->data[0] = median;
+			new_root->branch[0] = root;
+			new_root->branch[1] = right_branch;
+			root = new_root;
+			result = success;
+		}
+		return result;
+	}
+
 	void remove(const R &target){}
 
 protected:
@@ -41,12 +57,50 @@ private:
 		position = 0;
 		while (position < current->count && target > current->data[position])
 			position++; // Perform a sequential search through the keys.
-		position < current->count && target == current->data[position] ? return success : not_present;
+		return position < current->count && target == current->data[position] ? success : not_present;
 	}
 	
-	void push_down(Node *current, const R &new_entry, R &median, Node * &right_branch){}
+	void push_down(Node *current, const R &new_entry, R &median, Node * &right_branch){
+		Error_code result;
+		int position;
+		if (current == NULL) {
+			// Since we cannot insert in an empty tree, the recursion terminates.
+			median = new_entry;
+			right_branch = NULL;
+			result = overflow;
+		}
+		else { // Search the current node.
+			if (search_node(current, new_entry, position) == success)
+				result = duplicate_error;
+			else {
+				R extra_entry;
+				Node *extra_branch;
+				result = push_down(current->branch[position], new_entry, extra_entry, extra_branch);
+				if (result == overflow) {
+					// Record extra_entry now must be added to current
+					if (current->count < order − 1) {
+						result = success;
+						push_in(current, extra_entry, extra_branch, position);
+					}
+					else 
+						split_node(current, extra_entry, extra_branch, position, right_branch, median);
+					// Record median and its right_branch will go up to a higher node.
+				}
+			}
+		}
+		return result;
+	}
 	
-	void push_in(Node *current, const R &entry, Node *right_branch, int position){}
+	void push_in(Node *current, const R &entry, Node *right_branch, int position){
+		for (int i = current->count; i > position; i−−) {
+			// Shift all later data to the right.
+			current->data[i] = current->data[i − 1];
+			current->branch[i + 1] = current->branch[i];
+		}
+		current->data[position] = entry;
+		current->branch[position + 1] = right_branch;
+		current->count++;
+	}
 	
 	void split_node(
 		Node *current, // node to be split
@@ -55,7 +109,33 @@ private:
 		int position, // index in node where extra_entry goes
 		Node * &right_half, // new node for right half of entries
 		R &median) // median entry (in neither half)
-	{}
+	{
+		right_half = new Node;
+		int mid = order / 2; // The entries from mid on will go to right_half.
+		if (position <= mid) { // First case: extra_entry belongs in left half.
+			for (int i = mid; i < order − 1; i++) { // Move entries to right_half.
+				right_half->data[i − mid] = current->data[i];
+				right_half->branch[i + 1 − mid] = current->branch[i + 1];
+			}
+			current->count = mid;
+			right_half->count = order − 1 − mid;
+			push_in(current, extra_entry, extra_branch, position);
+		}
+		else { // Second case: extra_entry belongs in right half.
+			mid++; // Temporarily leave the median in left half.
+			for (int i = mid; i < order − 1; i++) { // Move entries to right_half.
+				right_half->data[i − mid] = current->data[i];
+				right_half->branch[i + 1 − mid] = current->branch[i + 1];
+			}
+			current->count = mid;
+			right_half->count = order − 1 − mid;
+			push_in(right_half, extra_entry, extra_branch, position − mid);
+		}
+		median = current->data[current->count − 1];
+		// Remove median from left half.
+		right_half->branch[0] = current->branch[current->count];
+		current->count−−;
+	}
 	
 	void recursive_remove(Node *current, const R &target){}
 	

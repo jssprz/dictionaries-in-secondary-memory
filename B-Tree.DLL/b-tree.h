@@ -36,7 +36,16 @@ public:
 		return result;
 	}
 
-	void remove(const R &target){}
+	Error_code remove(const R &target){
+		Error_code result;
+		result = recursive_remove(root, target);
+		if (root != NULL && root->count == 0) { // root is now empty.
+			Node *old_root = root;
+			root = root->branch[0];
+			delete old_root;
+		}
+		return result;
+	}
 
 protected:
 private:
@@ -60,7 +69,7 @@ private:
 		return position < current->count && target == current->data[position] ? success : not_present;
 	}
 	
-	void push_down(Node *current, const R &new_entry, R &median, Node * &right_branch){
+	Error_code push_down(Node *current, const R &new_entry, R &median, Node * &right_branch){
 		Error_code result;
 		int position;
 		if (current == NULL) {
@@ -137,19 +146,115 @@ private:
 		current->count−−;
 	}
 	
-	void recursive_remove(Node *current, const R &target){}
+	Error_code recursive_remove(Node *current, const R &target){
+		Error_code result;
+		int position;
+		if (current == NULL) result = not_present;
+		else {
+			if (search_node(current, target, position) == success) {
+				// The target is in the current node.
+				result = success;
+				if (current->branch[position] != NULL) { // not at a leaf node
+					copy_in_predecessor(current, position);
+					recursive_remove(current->branch[position],	current->data[position]);
+				}
+				else 
+					remove_data(current, position); // Remove from a leaf node.
+			}
+			else 
+				result = recursive_remove(current->branch[position], target);
+			if (current->branch[position] != NULL)
+				if (current->branch[position]->count < (order − 1) / 2)
+					restore(current, position);
+		}
+		return result;
+	}
 	
-	void remove_data(Node *current, int position){}
+	void remove_data(Node *current, int position){
+		for (int i = position; i < current->count − 1; i++)
+			current->data[i] = current->data[i + 1];
+		current->count−−;
+	}
 	
-	void copy_in_predecessor(Node *current, int position){}
+	void copy_in_predecessor(Node *current, int position){
+		B_node<Record, order> *leaf = current->branch[position];
+		// First go left from the current entry.
+		while (leaf->branch[leaf->count] != NULL)
+			leaf = leaf->branch[leaf->count]; // Move as far rightward as possible.
+		current->data[position] = leaf->data[leaf->count − 1];
+	}
 	
-	void restore(Node *current, int position){}
+	void restore(Node *current, int position){
+		if (position == current->count) // case: rightmost branch
+			if (current->branch[position − 1]->count > (order − 1) / 2)
+				move_right(current, position − 1);
+			else
+				combine(current, position);
+		else if (position == 0) // case: leftmost branch
+			if (current->branch[1]->count > (order − 1) / 2)
+				move_left(current, 1);
+			else
+				combine(current, 1);
+		else // remaining cases: intermediate branches
+			if (current->branch[position − 1]->count > (order − 1) / 2)
+				move_right(current, position − 1);
+			else if (current->branch[position + 1]->count > (order − 1) / 2)
+				move_left(current, position + 1);
+			else
+				combine(current, position);
+	}
 	
-	void move_left(Node *current, int position){}
+	void move_left(Node *current, int position){
+		Node *left_branch = current->branch[position − 1],
+			*right_branch = current->branch[position];
+		left_branch->data[left_branch->count] = current->data[position − 1];
+		// Take entry from the parent.
+		left_branch->branch[++left_branch->count] = right_branch->branch[0];
+		current->data[position − 1] = right_branch->data[0];
+		// Add the right-hand entry to the parent.
+		right_branch->count−−;
+		for (int i = 0; i < right_branch->count; i++) {
+			// Move right-hand entries to fill the hole.
+			right_branch->data[i] = right_branch->data[i + 1];
+			right_branch->branch[i] = right_branch->branch[i + 1];
+		}
+		right_branch->branch[right_branch->count] = right_branch->branch[right_branch->count + 1];
+	}
 	
-	void move_right(Node *current, int position){}
+	void move_right(Node *current, int position){
+		Node *right_branch = current->branch[position + 1],
+			*left_branch = current->branch[position];
+		right_branch->branch[right_branch->count + 1] =
+			right_branch->branch[right_branch->count];
+		for (int i = right_branch->count; i > 0; i−−) { // Make room for new entry.
+			right_branch->data[i] = right_branch->data[i − 1];
+			right_branch->branch[i] = right_branch->branch[i − 1];
+		}
+		right_branch->count++;
+		right_branch->data[0] = current->data[position];
+		// Take entry from parent.
+		right_branch->branch[0] = left_branch->branch[left_branch->count−−];
+		current->data[position] = left_branch->data[left_branch->count];
+	}
 	
-	void combine(Node *current, int position){}
+	void combine(Node *current, int position){
+		int i;
+		B_node<Record, order> *left_branch = current->branch[position − 1],
+			*right_branch = current->branch[position];
+		left_branch->data[left_branch->count] = current->data[position − 1];
+		left_branch->branch[++left_branch->count] = right_branch->branch[0];
+		for (i = 0; i < right_branch->count; i++) {
+			left_branch->data[left_branch->count] = right_branch->data[i];
+			left_branch->branch[++left_branch->count] =
+				right_branch->branch[i + 1];
+		}
+		current->count−−;
+		for (i = position − 1; i < current->count; i++) {
+			current->data[i] = current->data[i + 1];
+			current->branch[i + 1] = current->branch[i + 2];
+		}
+		delete right_branch;
+	}
 	
 	Node *root;
 	rsize_t order;

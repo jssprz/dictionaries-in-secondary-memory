@@ -8,4 +8,16 @@ namespace btree {
 		overflow=2,
 		duplicate_error=3
 	};
+
+	inline const char* ToString(Error_code v)
+	{
+		switch (v)
+		{
+		case success:   return "success";
+		case not_present:   return "not_present";
+		case overflow: return "overflow";
+		case duplicate_error: return "duplicate_error";
+		default:      return "[Unknown error code]";
+		}
+	}
 }

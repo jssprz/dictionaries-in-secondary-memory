@@ -27,16 +27,21 @@ int main() {
 	auto db = new BTree<string, string>(20);
 
 	cout << "generating..." << endl;
-	string s = generate_adn(15);
+	string data[1000];
+	for (size_t i = 0; i < 1000; i++)
+		data[i] = generate_adn(15);
 
 	cout << "inserting..." << endl;
-	cout << db->insert(s) << endl;
+	for (size_t i = 0; i < 1000; i++)
+		cout << i << ToString(db->insert(data[i])) << endl;
 
 	cout << "searching..." << endl;
-	cout << int(db->search(s)) << endl;
+	for (size_t i = 0; i < 1000; i++)
+		cout << i << ToString(db->search(data[i])) << endl;
 
-	cout << "searching..." << endl;
-	cout << int(db->remove(s)) << endl;
+	cout << "deleting..." << endl;
+	for (size_t i = 0; i < 1000; i++)
+		cout << i << ToString(db->remove(data[i])) << endl;
 
 	return 0;
 }

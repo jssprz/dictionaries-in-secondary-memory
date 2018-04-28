@@ -27,13 +27,20 @@
     <ClInclude Include="key.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="b-tree.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="b-tree-node.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClInclude Include="error-code.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="defpack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="file-location.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="file-record.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="file-stream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -141,12 +141,13 @@
   <ItemGroup>
     <ClInclude Include="b-tree-node.h" />
     <ClInclude Include="b-tree.h" />
+    <ClInclude Include="defpack.h" />
+    <ClInclude Include="error-code.h" />
+    <ClInclude Include="file-location.h" />
     <ClInclude Include="key.h" />
     <ClInclude Include="record.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="b-tree-node.cpp" />
-    <ClCompile Include="b-tree.cpp" />
+    <ClInclude Include="file-record.h" />
+    <ClInclude Include="file-stream.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

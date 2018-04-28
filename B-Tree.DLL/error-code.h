@@ -6,5 +6,6 @@ namespace btree {
 		success=0,
 		not_present=1,
 		overflow=2,
+		duplicate_error=3
 	};
 }

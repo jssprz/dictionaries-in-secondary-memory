@@ -11,7 +11,7 @@ namespace btree {
 		typedef BTreeNode<K, R> Node;
 
 		//constructor
-		BTree(size_t branchingFactor) :order(branchingFactor) {
+		BTree(size_t branchingFactor): order(branchingFactor), root(NULL) {
 		}
 
 		~BTree() {

@@ -1,17 +1,21 @@
 ﻿#pragma once
 
 #include "b-tree-node.h"
+#include "key.h"
 #include "error-code.h"
+#include "file-manager.h"
 
 namespace btree {
 
 	template <typename K, typename R>
 	class BTree {
 	public:
+		//typedef K::Key K;
 		typedef BTreeNode<K, R> Node;
 
 		//constructor
-		BTree(size_t branchingFactor): order(branchingFactor), root(NULL), n(0) {
+		BTree(size_t branchingFactor, FileManager *handler)
+			: order(branchingFactor), root(NULL), n(0), fm(handler) {
 		}
 
 		~BTree() {
@@ -55,8 +59,8 @@ namespace btree {
 			return this->n;
 		}
 
-	//protected:
-	//private:
+		//protected:
+		//private:
 		Error_code recursive_search(Node *current, R &target) {
 			Error_code result = not_present;
 			size_t position;
@@ -95,22 +99,22 @@ namespace btree {
 					result = duplicate_error;
 				}
 				else {*/
-					R extra_entry;
-					Node *extra_branch;
+				R extra_entry;
+				Node *extra_branch;
 
-					//read node current->branch[position] from disk
+				//read node current->branch[position] from disk
 
-					result = push_down(current->branch[position], new_entry, extra_entry, extra_branch);
-					if (result == overflow) {
-						// Record extra_entry now must be added to current
-						if (current->count < this->order - 1) {
-							result = success;
-							push_in(current, extra_entry, extra_branch, position);
-						}
-						else
-							// Record median and its right_branch will go up to a higher node.
-							split_node(current, extra_entry, extra_branch, position, right_branch, median);
+				result = push_down(current->branch[position], new_entry, extra_entry, extra_branch);
+				if (result == overflow) {
+					// Record extra_entry now must be added to current
+					if (current->count < this->order - 1) {
+						result = success;
+						push_in(current, extra_entry, extra_branch, position);
 					}
+					else
+						// Record median and its right_branch will go up to a higher node.
+						split_node(current, extra_entry, extra_branch, position, right_branch, median);
+				}
 				//}
 			}
 			return result;
@@ -166,13 +170,13 @@ namespace btree {
 			// write right_half node in disk
 			// write left_half node in disk
 			// write current node in disk
-			
+
 		}
 
 		Error_code recursive_remove(Node *current, const R &target) {
 			Error_code result;
 			size_t position;
-			if (current == NULL) 
+			if (current == NULL)
 				result = not_present;
 			else {
 				if (search_node(current, target, position) == success) {
@@ -262,7 +266,7 @@ namespace btree {
 		void move_right(Node *current, int position) {
 			Node *right_branch = current->branch[position + 1],
 				*left_branch = current->branch[position];
-			right_branch->branch[right_branch->count + 1] =	right_branch->branch[right_branch->count];
+			right_branch->branch[right_branch->count + 1] = right_branch->branch[right_branch->count];
 			for (int i = right_branch->count; i > 0; i--) { // Make room for new entry.
 				right_branch->data[i] = right_branch->data[i - 1];
 				right_branch->branch[i] = right_branch->branch[i - 1];
@@ -286,7 +290,7 @@ namespace btree {
 			left_branch->branch[++left_branch->count] = right_branch->branch[0];
 			for (i = 0; i < right_branch->count; i++) {
 				left_branch->data[left_branch->count] = right_branch->data[i];
-				left_branch->branch[++left_branch->count] =	right_branch->branch[i + 1];
+				left_branch->branch[++left_branch->count] = right_branch->branch[i + 1];
 			}
 			current->count--;
 			for (i = position - 1; i < current->count; i++) {
@@ -299,8 +303,74 @@ namespace btree {
 			// write current node in disk
 		}
 
+		static void disk_write(Node *x) {
+			//1-IsLeaf
+			//2-CantKeys
+			//3-Children
+			//4-Satellite
+			//5-PosFile
+			//6-Keys
+
+			long index = 0;
+			char bufferNode[BTree::nodeSize];
+			char aux[];
+
+			//write the count of keys the node has
+			aux = char*(x->count);
+			memcpy(bufferNode, aux, 4);
+			index += 4;
+
+			//write the references to the childs
+			for (int i = 0; i <= x.CantKeys; i++) {
+				aux = char*(x->branch[i]);
+				memcpy(bufferNode + index, aux, 8);
+				index += 8;
+			}
+			index += (this->order - (x->count + 1)) * 8;
+
+			////Escribimos la información satélite.(R[])
+			//for (int i = 0; i < x.CantKeys; i++)
+			//{
+			//	aux = x.Satellite[i].Save();
+			//	Array.Copy(aux, 0, bufferNode, index, valueSize);
+			//	index += valueSize;
+			//}
+			//index += (x.Satellite.Length - x.CantKeys) * valueSize;//nos saltamos los valores no asignados
+
+			//													   //Escribimos la posición del nodo en el archivo
+			//aux = BitConverter.GetBytes(x.PosFile);
+			//Array.Copy(aux, 0, bufferNode, index, aux.Length);
+			//index += 8;
+
+			//write the keys
+			for (int i = 0; i < x.CantKeys; i++) {
+				aux = x->data.save();
+				memcpy(bufferNode, aux, keySize)
+					index += keySize;
+			}
+			index += (this->order - x->count) * keySize;
+
+			//write info in the file
+			fm->get_file_stream.seek(x.pos_file);
+			fm->get_file_stream.write(bufferNode, sizeof(bufferNode));
+			fm->get_file_stream.flush();
+		}
+
+		static void disk_read(long file_position) {
+
+		}
+
+		// root of the btree
 		Node *root;
+		// branching factor
 		size_t order;
+		// count of keys
 		long n;
+		// file manager
+		FileManager *fm;
+
+		static long nodeSize;
+		static int keySize;   //K.Size
+		static int valueSize; //R.Size
 	};
 }

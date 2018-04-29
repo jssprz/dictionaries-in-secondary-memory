@@ -23,4 +23,5 @@ public:
 	size_t count;
 	K *data;
 	BTreeNode<K, R> **branch;
+	long pos_file;
 };

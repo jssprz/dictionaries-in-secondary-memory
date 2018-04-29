@@ -2,6 +2,7 @@
 #include "CppUnitTest.h"
 
 #include "b-tree.h"
+#include "file-manager.h"
 #include <vector>
 #include <algorithm>    // std::random_shuffle
 
@@ -11,12 +12,12 @@ using namespace btree;
 
 #define DATA_SIZE 1048576
 
-namespace TestsUnitTest
-{
+namespace TestsUnitTest {
 	TEST_CLASS(BTreeUnitTest)
 	{
 	public:
 		BTree<string, string> *tree;
+		FileManager *fm;
 		vector<string> data;
 
 		BTreeUnitTest() {
@@ -25,31 +26,29 @@ namespace TestsUnitTest
 		}
 
 		TEST_METHOD_INITIALIZE(BtreeInitialization) {
-			tree = new BTree<string, string>(20);
+			fm = new FileManager("", 20);
+			tree = new BTree<string, string>(20, fm);
 		}
 
 		TEST_METHOD_CLEANUP(BTreeCleanUp) {
 			delete tree;
+			delete fm;
 		}
-		
-		TEST_METHOD(BtreeSearchEmptyTest)
-		{
+
+		TEST_METHOD(BtreeSearchEmptyTest) {
 			string s = generate_adn(15);
 			Assert::AreEqual(int(not_present), int(tree->search(s)));
 		}
 
-		TEST_METHOD(BtreeInsertEmptyAndSearchTest)
-		{
+		TEST_METHOD(BtreeInsertEmptyAndSearchTest) {
 			string s = generate_adn(15);
 			Assert::AreEqual(int(success), int(tree->insert(s)));
 			Assert::AreEqual(int(success), int(tree->search(s)));
-			Assert::AreEqual(int(not_present), int(tree->search(s+"A")));
+			Assert::AreEqual(int(not_present), int(tree->search(s + "A")));
 		}
 
-		TEST_METHOD(BtreeInsertAndSearchTest)
-		{
-			for (size_t i = 0; i < data.size(); i++)
-			{
+		TEST_METHOD(BtreeInsertAndSearchTest) {
+			for (size_t i = 0; i < data.size(); i++) {
 				auto result = tree->insert(data[i]);
 				Assert::AreEqual(int(success), int(result));
 				result = tree->search(data[i]);
@@ -57,8 +56,7 @@ namespace TestsUnitTest
 			}
 		}
 
-		TEST_METHOD(BtreeInsertDulicatedSearchAndRemoveTest)
-		{
+		TEST_METHOD(BtreeInsertDulicatedSearchAndRemoveTest) {
 			string s = generate_adn(15);
 
 			long i;
@@ -75,15 +73,13 @@ namespace TestsUnitTest
 				Assert::AreEqual(tree->count(), i - 1);
 			}
 		}
-		
-		TEST_METHOD(BtreeRemoveEmptyTest)
-		{
+
+		TEST_METHOD(BtreeRemoveEmptyTest) {
 			string s = generate_adn(15);
 			Assert::AreEqual(int(not_present), int(tree->search(s)));
 		}
 
-		TEST_METHOD(BtreeInsertRemoveSearchTest)
-		{
+		TEST_METHOD(BtreeInsertRemoveSearchTest) {
 			for (size_t i = 0; i < data.size(); i++) {
 				auto result = tree->insert(data[i]);
 				Assert::AreEqual(int(success), int(result));
@@ -94,8 +90,7 @@ namespace TestsUnitTest
 			}
 		}
 
-		TEST_METHOD(BtreeRemoveTest)
-		{
+		TEST_METHOD(BtreeRemoveTest) {
 			// insert all elements in the tree
 			for (size_t i = 0; i < data.size(); i++)
 				tree->insert(data[i]);
@@ -107,10 +102,10 @@ namespace TestsUnitTest
 			for (size_t i = 0; i < count; i++) {
 				// remove current element from tree
 				Assert::AreEqual(int(success), int(tree->remove(data[i])));
-				
+
 				// check the removed element is not present in the tree
 				// Assert::AreEqual(int(not_present), int(tree->search(data[i])));
-				
+
 				// check all other elements are in the tree
 				for (size_t j = i + 1; j < count; j++)
 					Assert::AreEqual(int(success), int(tree->search(data[j])));

@@ -144,6 +144,7 @@
     <ClInclude Include="defpack.h" />
     <ClInclude Include="error-code.h" />
     <ClInclude Include="file-location.h" />
+    <ClInclude Include="file-manager.h" />
     <ClInclude Include="key.h" />
     <ClInclude Include="record.h" />
     <ClInclude Include="file-record.h" />

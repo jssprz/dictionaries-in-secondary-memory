@@ -42,5 +42,8 @@
     <ClInclude Include="file-stream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="file-manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

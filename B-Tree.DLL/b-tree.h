@@ -51,6 +51,10 @@ namespace btree {
 			return result;
 		}
 
+		long count() {
+			return this->n;
+		}
+
 	//protected:
 	//private:
 		Error_code recursive_search(Node *current, R &target) {
@@ -126,8 +130,7 @@ namespace btree {
 
 		}
 
-		void split_node(
-			Node *current, // node to be split
+		void split_node(Node *current, // node to be split
 			const R &extra_entry, // new entry to insert
 			Node *extra_branch, // subtree on right of extra_entry
 			int position, // index in node where extra_entry goes

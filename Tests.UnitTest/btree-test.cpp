@@ -65,14 +65,14 @@ namespace TestsUnitTest
 			for (i = 0; i < 50; i++) {
 				tree->insert(s);
 				//Assert::AreEqual(int(duplicate_error), int(tree->insert(s)));
-				Assert::AreEqual(tree->n, i + 1);
+				Assert::AreEqual(tree->count(), i + 1);
 			}
 
 			Assert::AreEqual(int(success), int(tree->search(s)));
 
 			for (; i > 0; i--) {
 				tree->remove(s);
-				Assert::AreEqual(tree->n, i - 1);
+				Assert::AreEqual(tree->count(), i - 1);
 			}
 		}
 		

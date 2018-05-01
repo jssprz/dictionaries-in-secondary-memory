@@ -43,19 +43,19 @@ namespace btree {
 
 		// returns a node of cache
 		Node* find(long file_position) {
-			auto result = this->contains(file_position);
+			auto result = contains(file_position);
 			if (result == NULL)
 				return NULL;
-			this->_cache.remove(result);
-			this->_cache.push_front(result);
-			return this->_cache.front();
+			_cache.remove(result);
+			_cache.push_front(result);
+			return _cache.front();
 		}
 
 		// write in disk all nodes of cache
 		void flush() {
-			for (list<Node*>::iterator it = mylist.begin(); it != mylist.end(); ++it)
-				BTree<K, R>::disk_write(*it);
-			this->cache = list(capacity);
+			for (list<Node*>::iterator it = _cache.begin(); it != _cache.end(); ++it)
+				BTree<K, R, TK, TR>::disk_write(*it);
+			_cache.clear();
 		}
 
 		// update that was changed

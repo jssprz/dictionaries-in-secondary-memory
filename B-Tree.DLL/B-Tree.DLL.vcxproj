@@ -141,6 +141,7 @@
   <ItemGroup>
     <ClInclude Include="b-tree-node.h" />
     <ClInclude Include="b-tree.h" />
+    <ClInclude Include="cache-memory.h" />
     <ClInclude Include="defpack.h" />
     <ClInclude Include="error-code.h" />
     <ClInclude Include="file-location.h" />

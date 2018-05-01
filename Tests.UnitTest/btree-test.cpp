@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include "CppUnitTest.h"
 
-#include "b-tree.h"
-#include "file-manager.h"
+#include "types-def.h"
+#include <b-tree.h>
+#include <file-manager.h>
 #include <vector>
 #include <algorithm>    // std::random_shuffle
 
@@ -13,21 +14,24 @@ using namespace btree;
 #define DATA_SIZE 1048576
 
 namespace TestsUnitTest {
+	
+
 	TEST_CLASS(BTreeUnitTest)
 	{
 	public:
-		BTree<string, string> *tree;
+		BTree<KeyDef, RecordDef, string, string> *tree;
 		FileManager *fm;
-		vector<string> data;
+		vector<KeyDef> data;
 
 		BTreeUnitTest() {
+			data.reserve(DATA_SIZE);
 			for (size_t i = 0; i < DATA_SIZE; i++)
-				data.push_back(this->generate_adn(15));
+				data.push_back(KeyDef(this->generate_adn(15)));
 		}
 
 		TEST_METHOD_INITIALIZE(BtreeInitialization) {
-			fm = new FileManager("", 20);
-			tree = new BTree<string, string>(20, fm);
+			//fm = new FileManager("test.btree", 512);
+			//tree = new BTree<KeyDef, RecordDef, string, string>(22, fm, 15, 0);
 		}
 
 		TEST_METHOD_CLEANUP(BTreeCleanUp) {
@@ -36,18 +40,27 @@ namespace TestsUnitTest {
 		}
 
 		TEST_METHOD(BtreeSearchEmptyTest) {
-			string s = generate_adn(15);
+			fm = new FileManager("btree-tests/BtreeSearchEmptyTest.btree", 512);
+			tree = new BTree<KeyDef, RecordDef, string, string>(22, fm, 15, 0);
+
+			KeyDef s(generate_adn(15));
 			Assert::AreEqual(int(not_present), int(tree->search(s)));
 		}
 
 		TEST_METHOD(BtreeInsertEmptyAndSearchTest) {
-			string s = generate_adn(15);
+			fm = new FileManager("btree-tests/BtreeInsertEmptyAndSearchTest.btree", 512);
+			tree = new BTree<KeyDef, RecordDef, string, string>(22, fm, 15, 0);
+
+			KeyDef s(generate_adn(15));
 			Assert::AreEqual(int(success), int(tree->insert(s)));
 			Assert::AreEqual(int(success), int(tree->search(s)));
-			Assert::AreEqual(int(not_present), int(tree->search(s + "A")));
+			Assert::AreEqual(int(not_present), int(tree->search(KeyDef(s.get_value() + "A"))));
 		}
 
 		TEST_METHOD(BtreeInsertAndSearchTest) {
+			fm = new FileManager("btree-tests/BtreeInsertAndSearchTest.btree", 512);
+			tree = new BTree<KeyDef, RecordDef, string, string>(22, fm, 15, 0);
+
 			for (size_t i = 0; i < data.size(); i++) {
 				auto result = tree->insert(data[i]);
 				Assert::AreEqual(int(success), int(result));
@@ -57,29 +70,38 @@ namespace TestsUnitTest {
 		}
 
 		TEST_METHOD(BtreeInsertDulicatedSearchAndRemoveTest) {
-			string s = generate_adn(15);
+			fm = new FileManager("btree-tests/BtreeInsertDulicatedSearchAndRemoveTest.btree", 512);
+			tree = new BTree<KeyDef, RecordDef, string, string>(22, fm, 15, 0);
 
+			KeyDef s(generate_adn(15));
 			long i;
-			for (i = 0; i < 50; i++) {
+			for (i = 1; i <= 50; i++) {
 				tree->insert(s);
 				//Assert::AreEqual(int(duplicate_error), int(tree->insert(s)));
-				Assert::AreEqual(tree->count(), i + 1);
+				Assert::AreEqual(i, tree->count());
 			}
 
 			Assert::AreEqual(int(success), int(tree->search(s)));
 
-			for (; i > 0; i--) {
+			i--;
+			for (; i >= 1; i--) {
 				tree->remove(s);
-				Assert::AreEqual(tree->count(), i - 1);
+				Assert::AreEqual(i - 1,tree->count());
 			}
 		}
 
 		TEST_METHOD(BtreeRemoveEmptyTest) {
-			string s = generate_adn(15);
+			fm = new FileManager("btree-tests/BtreeRemoveEmptyTest.btree", 512);
+			tree = new BTree<KeyDef, RecordDef, string, string>(22, fm, 15, 0);
+
+			KeyDef s(generate_adn(15));
 			Assert::AreEqual(int(not_present), int(tree->search(s)));
 		}
 
 		TEST_METHOD(BtreeInsertRemoveSearchTest) {
+			fm = new FileManager("btree-tests/BtreeInsertRemoveSearchTest.btree", 512);
+			tree = new BTree<KeyDef, RecordDef, string, string>(22, fm, 15, 0);
+
 			for (size_t i = 0; i < data.size(); i++) {
 				auto result = tree->insert(data[i]);
 				Assert::AreEqual(int(success), int(result));
@@ -91,6 +113,9 @@ namespace TestsUnitTest {
 		}
 
 		TEST_METHOD(BtreeRemoveTest) {
+			fm = new FileManager("btree-tests/BtreeRemoveTest.btree", 512);
+			tree = new BTree<KeyDef, RecordDef, string, string>(22, fm, 15, 0);
+
 			// insert all elements in the tree
 			for (size_t i = 0; i < data.size(); i++)
 				tree->insert(data[i]);

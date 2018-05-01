@@ -45,5 +45,8 @@
     <ClInclude Include="file-manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="cache-memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

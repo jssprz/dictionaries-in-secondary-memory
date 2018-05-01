@@ -8,13 +8,56 @@ namespace btree {
 	class FileManager
 	{
 	public:
+		// underlaying out stream
+		fstream fileStream;
+
 		FileManager(string path, long blockSize) {
 			this->blockSize = blockSize;
-			this->fileStream = fstream(path);
-			this->load();
+			this->fileStream.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::trunc);
+			//fstream f(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::trunc);
+			if (!fileStream.is_open())
+				throw std::runtime_error("Could not open file");
+			else if (fileStream.peek() == std::ifstream::traits_type::eof()) {
+				//file is empty
+				fileStream.clear();
+				this->freeMemory = 0;
+				this->hs = 0;
+				this->he = 0;
+
+				//write
+				//long x = 200;
+				//int y = 999;
+				//auto wb = new char[12];
+				//strncpy(wb, (char *)&x, 8);
+				//strncpy(wb+8, (char *)&y, 4);
+
+				//fileStream.seekp(0);
+				//fileStream.write(wb, 12);
+				//fileStream.write((char *)&x, 8);
+				//fileStream.write((char *)&y, 4);
+				//fileStream.flush();
+
+				//read
+				//fileStream.seekg(0);
+				//auto rb = new char[12];
+				//fileStream.read(rb, 12);
+				//long xr = *((long*)rb);
+				//int yr = *((int*)(rb+8));
+
+				//char *buf = new char[8];
+				//fileStream.read(buf, 8);
+				//long xr = *((long*)buf);
+
+				//char *buf2 = new char[4];
+				//fileStream.read(buf, 4);
+				//int yr = *((int*)buf);
+				//fileStream.close();
+			}
+			else
+				this->load();
 		}
 		~FileManager() {
-
+			fileStream.close();
 		}
 
 		// path of the file
@@ -48,28 +91,28 @@ namespace btree {
 		}
 
 		// get the stram
-		fstream& get_file_stram() {
-			return this->fileStream;
-		}
+		//fstream get_file_stream() {
+		//	return fileStream;
+		//}
 
 		// in charge of reserving memory
 		// Returns a long where memory is free
 		long alloc() {
-			if (freeMemory == 0) {
+			if (this->freeMemory == 0) {
 				long tmp = he;
 				he += blockSize;
 				return tmp; //is searched at the end of the file
 			}
 			else {
-				long tmp = freeMemory;
-				fileStream.seekp(freeMemory);
+				long tmp = this->freeMemory;
+				fileStream.seekp(this->freeMemory);
 
 				//the next free memory is read
 				char buffer[8];
 				fileStream.read(buffer, 8);
 				unsigned long next_free = *((unsigned long*)buffer);
 
-				freeMemory = next_free;//the next free memory is saved
+				this->freeMemory = next_free;//the next free memory is saved
 
 				return tmp;//returns the free memory
 			}
@@ -109,17 +152,19 @@ namespace btree {
 		// In charge of reading all the necessary information.
 		void load()
 		{
+			fileStream.clear();
+
 			char buffer[8];
 
 			fileStream.seekg(0);
 			fileStream.read(buffer, 8);
-			unsigned long freeMemory = *((unsigned long*)buffer);
+			this->freeMemory = *((long*)buffer);
 
 			fileStream.read(buffer, 8);
-			unsigned long hs = *((unsigned long*)buffer);
+			this->hs = *((long*)buffer);
 
 			fileStream.read(buffer, 8);
-			unsigned long he = *((unsigned long*)buffer);
+			this->he = *((long*)buffer);
 		}
 
 	private:
@@ -131,7 +176,5 @@ namespace btree {
 		long he;
 		// size of the file's block
 		int blockSize;
-		// underlaying out stream
-		fstream fileStream;
 	};
 }

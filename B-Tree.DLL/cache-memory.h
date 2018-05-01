@@ -26,17 +26,16 @@ namespace btree {
 
 		// adds a node to the cache
 		void add(Node* x) {
-			if (this->_cache.size() == _capacity)
-			{
-				BTree<K, R, TK, TR>::disk_write(this->_cache.back());
-				this->_cache.pop_back();
+			if (_cache.size() == _capacity) {
+				BTree<K, R, TK, TR>::disk_write(_cache.back());
+				_cache.pop_back();
 			}
-			this->_cache.push_front(x);
+			_cache.push_front(x);
 		}
 
 		// determine if a node is in cache and returns it
 		Node* contains(long file_position) {
-			for (list<Node*>::iterator it = mylist.begin(); it != mylist.end(); ++it)
+			for (list<Node*>::iterator it = _cache.begin(); it != _cache.end(); ++it)
 				if ((*it)->file_position == file_position)
 					return *it;
 			return NULL;
@@ -71,7 +70,7 @@ namespace btree {
 		// removes a node of cache, but only when its memory is freed
 		void remove(Node *x) {
 			Node *result = contains(x->file_position);
-			if (result = NULL)
+			if (result == NULL)
 				return;
 			this->_cache.remove(result);
 		}

@@ -75,9 +75,11 @@ namespace btree {
 				Node *old_root = root;
 
 				// Read node root->branch[0] from disk
-				root = disk_read(root->branch[0]);
-				//root = root->branch[0];
+				root = get_node(root->branch[0]);
 
+				// Delete old_root node
+				fm->free(old_root->file_position);
+				RAM->remove(old_root);
 				delete old_root;
 			}
 			return result;
@@ -85,6 +87,18 @@ namespace btree {
 
 		long count() {
 			return this->n;
+		}
+
+		Node* get_node(long file_position) {
+			if (file_position == -1)
+				return NULL;
+
+			auto node = RAM->find(file_position);
+			if (node == NULL) { //if it is not in the cache
+				node = disk_read(file_position);
+				RAM->add(node);
+			}
+			return node;
 		}
 
 		static void disk_write(Node *x) {
@@ -146,9 +160,6 @@ namespace btree {
 		}
 
 		static Node* disk_read(long file_position) {
-			if (file_position == -1)
-				return NULL;
-
 			//1-IsLeaf
 			//2-CantKeys
 			//3-Children
@@ -220,7 +231,7 @@ namespace btree {
 				result = search_node(current, target, position);
 				if (result == not_present) {
 					// Read node current->branch[position] from disk
-					auto child = disk_read(current->branch[position]);
+					auto child = get_node(current->branch[position]);
 
 					result = recursive_search(child, target);
 				}
@@ -256,7 +267,7 @@ namespace btree {
 				Node *extra_branch;
 
 				// Read node current->branch[position] from disk
-				auto child = disk_read(current->branch[position]);
+				auto child = get_node(current->branch[position]);
 
 				result = push_down(child, new_entry, extra_entry, extra_branch);
 				if (result == overflow) {
@@ -297,7 +308,6 @@ namespace btree {
 		{
 			//allocate new node for the right half
 			right_half = alloc();
-			//right_half = new Node(this->order);
 
 			int mid = order / 2; // The entries from mid on will go to right_half.
 			if (position <= mid) { // First case: extra_entry belongs in left half.
@@ -344,7 +354,7 @@ namespace btree {
 						copy_in_predecessor(current, position);
 
 						// Read node current->branch[position] from disk
-						auto child = disk_read(current->branch[position]);
+						auto child = get_node(current->branch[position]);
 
 						recursive_remove(child, current->data[position]);
 					}
@@ -353,13 +363,13 @@ namespace btree {
 				}
 				else {
 					// Read node current->branch[position] from disk
-					auto child = disk_read(current->branch[position]);
+					auto child = get_node(current->branch[position]);
 
 					result = recursive_remove(child, target);
 				}
 				if (current->branch[position] != -1) {
 					// Read node current->branch[position] from disk
-					auto child = disk_read(current->branch[position]);
+					auto child = get_node(current->branch[position]);
 
 					if (child->count < (order - 1) / 2)
 						restore(current, position);
@@ -381,10 +391,10 @@ namespace btree {
 
 		void copy_in_predecessor(Node *current, int position) {
 			// Read node current->branch[position] from disk
-			auto leaf = disk_read(current->branch[position]);
+			auto leaf = get_node(current->branch[position]);
 			// First go left from the current entry.
 			while (leaf->branch[leaf->count] != -1) {
-				leaf = disk_read(leaf->branch[leaf->count]); // Move as far rightward as possible.
+				leaf = get_node(leaf->branch[leaf->count]); // Move as far rightward as possible.
 			}
 			current->data[position] = leaf->data[leaf->count - 1];
 		}
@@ -392,7 +402,7 @@ namespace btree {
 		void restore(Node *current, int position) {
 			if (position == current->count) {// case: rightmost branch
 				// Read node current->branch[position - 1] from disk
-				auto child = disk_read(current->branch[position]);
+				auto child = get_node(current->branch[position]);
 				if (child->count > (order - 1) / 2)
 					move_right(current, position - 1);
 				else
@@ -400,7 +410,7 @@ namespace btree {
 			}
 			else if (position == 0) {// case: leftmost branch
 				// Read node current->branch[1] from disk
-				auto child = disk_read(current->branch[1]);
+				auto child = get_node(current->branch[1]);
 				if (child->count > (order - 1) / 2)
 					move_left(current, 1);
 				else
@@ -408,12 +418,12 @@ namespace btree {
 			}
 			else {// remaining cases: intermediate branches
 				// Read node current->branch[position] from disk
-				auto child = disk_read(current->branch[position]);
+				auto child = get_node(current->branch[position]);
 				if (child->count > (order - 1) / 2)
 					move_right(current, position - 1);
 				else {
 					// Read node current->branch[position + 1] from disk
-					child = disk_read(current->branch[position + 1]);
+					child = get_node(current->branch[position + 1]);
 					if (child->count > (order - 1) / 2)
 						move_left(current, position + 1);
 					else
@@ -423,8 +433,8 @@ namespace btree {
 		}
 
 		void move_left(Node *current, int position) {
-			Node *left_branch = disk_read(current->branch[position - 1]),
-				*right_branch = disk_read(current->branch[position]);
+			Node *left_branch = get_node(current->branch[position - 1]),
+				*right_branch = get_node(current->branch[position]);
 			left_branch->data[left_branch->count] = current->data[position - 1];
 			// Take entry from the parent.
 			left_branch->branch[++left_branch->count] = right_branch->branch[0];
@@ -447,8 +457,8 @@ namespace btree {
 		}
 
 		void move_right(Node *current, int position) {
-			Node *right_branch = disk_read(current->branch[position + 1]),
-				*left_branch = disk_read(current->branch[position]);
+			Node *right_branch = get_node(current->branch[position + 1]),
+				*left_branch = get_node(current->branch[position]);
 			right_branch->branch[right_branch->count + 1] = right_branch->branch[right_branch->count];
 			for (int i = right_branch->count; i > 0; i--) { // Make room for new entry.
 				right_branch->data[i] = right_branch->data[i - 1];
@@ -470,8 +480,8 @@ namespace btree {
 
 		void combine(Node *current, int position) {
 			int i;
-			Node *left_branch = disk_read(current->branch[position - 1]),
-				*right_branch = disk_read(current->branch[position]);
+			Node *left_branch = get_node(current->branch[position - 1]),
+				*right_branch = get_node(current->branch[position]);
 			left_branch->data[left_branch->count] = current->data[position - 1];
 			left_branch->branch[++left_branch->count] = right_branch->branch[0];
 			for (i = 0; i < right_branch->count; i++) {
@@ -483,6 +493,10 @@ namespace btree {
 				current->data[i] = current->data[i + 1];
 				current->branch[i + 1] = current->branch[i + 2];
 			}
+
+			// Delete right_branch node
+			fm->free(right_branch->file_position);
+			RAM->remove(right_branch);
 			delete right_branch;
 
 			// Write left_branch node in disk

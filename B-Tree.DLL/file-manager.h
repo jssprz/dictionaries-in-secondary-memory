@@ -125,7 +125,7 @@ namespace btree {
 			freeMemory = memory;
 
 			fileStream.seekp(memory);
-			fileStream.write((char*)tmp, 8);
+			fileStream.write((char *)&tmp, 8);
 			fileStream.flush();
 		}
 

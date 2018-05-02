@@ -142,14 +142,9 @@
     <ClInclude Include="b-tree-node.h" />
     <ClInclude Include="b-tree.h" />
     <ClInclude Include="cache-memory.h" />
-    <ClInclude Include="defpack.h" />
+    <ClInclude Include="data-types.h" />
     <ClInclude Include="error-code.h" />
-    <ClInclude Include="file-location.h" />
     <ClInclude Include="file-manager.h" />
-    <ClInclude Include="key.h" />
-    <ClInclude Include="record.h" />
-    <ClInclude Include="file-record.h" />
-    <ClInclude Include="file-stream.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -21,31 +21,16 @@
     <ClInclude Include="b-tree-node.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="record.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="key.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="error-code.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="defpack.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="file-location.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="file-record.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="file-stream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="file-manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cache-memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="data-types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

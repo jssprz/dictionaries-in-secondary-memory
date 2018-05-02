@@ -1,7 +1,6 @@
 ﻿#pragma once
 
-#include "key.h"
-#include "record.h"
+#include "data-types.h"
 #include <vector>
 
 using namespace std;

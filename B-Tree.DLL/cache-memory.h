@@ -2,8 +2,7 @@
 
 #include "b-tree.h"
 #include "b-tree-node.h"
-#include "key.h"
-#include "record.h"
+#include "data-types.h"
 #include <list>
 
 using namespace std;
@@ -26,27 +25,13 @@ namespace btree {
 
 		// adds a node to the cache
 		void add(Node* x) {
-			if (x->file_position != 34304) {
-				if (_cache.size() == _capacity) {
-					auto last = _cache.back();
-					if (last->file_position != 34304)
-						BTree<K, R, TK, TR>::disk_write(last);
-					else
-						BTree<K, R, TK, TR>::disk_write(last);
-					_cache.pop_back();
-					//delete last;
-				}
-				_cache.push_front(x);
+			if (_cache.size() == _capacity) {
+				auto last = _cache.back();
+				BTree<K, R, TK, TR>::disk_write(last);
+				_cache.pop_back();
+				//delete last;
 			}
-			else {
-				if (_cache.size() == _capacity) {
-					auto last = _cache.back();
-					BTree<K, R, TK, TR>::disk_write(last);
-					_cache.pop_back();
-					//delete last;
-				}
-				_cache.push_front(x);
-			}
+			_cache.push_front(x);
 		}
 
 		// determine if a node is in cache and returns it

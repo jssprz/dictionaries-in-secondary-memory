@@ -26,11 +26,27 @@ namespace btree {
 
 		// adds a node to the cache
 		void add(Node* x) {
-			if (_cache.size() == _capacity) {
-				BTree<K, R, TK, TR>::disk_write(_cache.back());
-				_cache.pop_back();
+			if (x->file_position != 34304) {
+				if (_cache.size() == _capacity) {
+					auto last = _cache.back();
+					if (last->file_position != 34304)
+						BTree<K, R, TK, TR>::disk_write(last);
+					else
+						BTree<K, R, TK, TR>::disk_write(last);
+					_cache.pop_back();
+					//delete last;
+				}
+				_cache.push_front(x);
 			}
-			_cache.push_front(x);
+			else {
+				if (_cache.size() == _capacity) {
+					auto last = _cache.back();
+					BTree<K, R, TK, TR>::disk_write(last);
+					_cache.pop_back();
+					//delete last;
+				}
+				_cache.push_front(x);
+			}
 		}
 
 		// determine if a node is in cache and returns it
@@ -53,8 +69,10 @@ namespace btree {
 
 		// write in disk all nodes of cache
 		void flush() {
-			for (list<Node*>::iterator it = _cache.begin(); it != _cache.end(); ++it)
+			for (list<Node*>::iterator it = _cache.begin(); it != _cache.end(); ++it) {
 				BTree<K, R, TK, TR>::disk_write(*it);
+				delete *it;
+			}
 			_cache.clear();
 		}
 
@@ -72,7 +90,7 @@ namespace btree {
 			Node *result = contains(x->file_position);
 			if (result == NULL)
 				return;
-			this->_cache.remove(result);
+			_cache.remove(result);
 		}
 
 		int size() {

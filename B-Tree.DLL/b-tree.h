@@ -34,8 +34,20 @@ namespace btree {
 			BTree<K, R, TK, TR>::fm = handler;
 			BTree<K, R, TK, TR>::keySize = keySize;
 			BTree<K, R, TK, TR>::valueSize = valueSize;
-			this->RAM = new Cache(100);
+			this->RAM = new Cache(50);
 			calculate_node_size();
+		}
+
+		BTree(size_t branchingFactor, FileManager *handler, long root_file_position, int keySize, int valueSize)
+			: root(NULL), n(0) {
+			BTree<K, R, TK, TR>::order = branchingFactor;
+			BTree<K, R, TK, TR>::fm = handler;
+			BTree<K, R, TK, TR>::keySize = keySize;
+			BTree<K, R, TK, TR>::valueSize = valueSize;
+			this->RAM = new Cache(50);
+			calculate_node_size();
+
+			this->root = disk_read(root_file_position);
 		}
 
 		~BTree() {
@@ -62,6 +74,10 @@ namespace btree {
 				new_root->data[0] = median;
 				new_root->branch[0] = root == NULL ? -1 : root->file_position;
 				new_root->branch[1] = right_branch == NULL ? -1 : right_branch->file_position;
+
+				if (root != NULL && RAM->contains(root->file_position) == NULL)
+					RAM->add(root);
+
 				root = new_root;
 				result = success;
 			}
@@ -83,6 +99,14 @@ namespace btree {
 				delete old_root;
 			}
 			return result;
+		}
+
+		// save the btree
+		void save() {
+			if (root != NULL) {
+				disk_write(root);
+				RAM->flush();
+			}
 		}
 
 		long count() {
@@ -109,19 +133,29 @@ namespace btree {
 			//5-PosFile
 			//6-Keys
 
-			long index = 0;
-			auto bufferNode = new char[nodeSize];
+			bool caso = false;
+			if (x->file_position == 34304)
+				caso = true;
+
+			fm->fileStream.seekp(x->file_position);
+
+			//long index = 0;
+			//auto bufferNode = new char[nodeSize];
 
 			// Write the count of keys the node has
-			strncpy(bufferNode, (char *)&(x->count), 4);
-			index += 4;
+			//strncpy(bufferNode, (char *)&(x->count), 4);
+			//index += 4;
+			fm->fileStream.write((char *)&(x->count), sizeof(size_t));
 
+			//strncpy(bufferNode + index, (char *)&(x->branch[0]), (x->count + 1) * 8);
 			// Write the references to the childs
-			for (size_t i = 0; i <= x->count; i++) {
-				strncpy(bufferNode + index, (char *)&(x->branch[i]), 8);
-				index += 8;
+			for (size_t i = 0; i < x->branch.size(); i++) {
+				//long f_pos = x->branch[i];
+				//memcpy(bufferNode + index, reinterpret_cast<char * const>(&f_pos), 8);
+				//index += 8;
+				fm->fileStream.write((char *)&(x->branch[i]), sizeof(long));
 			}
-			index += ((order) - (x->count + 1)) * 8;
+			//index += ((order) - (x->count + 1)) * 8;
 
 			////Escribimos la información satélite.(R[])
 			//for (int i = 0; i < x.CantKeys; i++)
@@ -133,30 +167,25 @@ namespace btree {
 			//index += (x.Satellite.Length - x.CantKeys) * valueSize;//nos saltamos los valores no asignados
 
 			// Write the file_position of the node
-			strncpy(bufferNode + index, (char *)&(x->file_position), 8);
-			index += 8;
+			//strncpy(bufferNode + index, (char *)&(x->file_position), 8);
+			//index += 8;
 
 			// Write the keys (K[])
-			for (int i = 0; i < x->count; i++) {
+			for (size_t i = 0; i < x->data.size(); i++) {
 				auto key = x->data[i].save();
-				strncpy(bufferNode + index, key, keySize);
+				//strncpy(bufferNode + index, key, keySize);
+				fm->fileStream.write(key, keySize);
 				delete[] key;
-				index += keySize;
+				//index += keySize;
 			}
-			index += (order - x->count) * keySize;
+			//index += (order - x->count) * keySize;
 
 			// Write info in the file
-			fm->fileStream.seekp(x->file_position);
-			fm->fileStream.write(bufferNode, nodeSize);
+			//fm->fileStream.seekp(x->file_position);
+			//fm->fileStream.write(bufferNode, nodeSize);
 			fm->fileStream.flush();
 
-			auto flag = fm->fileStream.rdstate();
-			auto fail = fm->fileStream.fail();
-			auto good = fm->fileStream.good();
-			auto bad = fm->fileStream.bad();
-			auto eof = fm->fileStream.eof();
-
-			delete[] bufferNode;
+			//delete[] bufferNode;
 		}
 
 		static Node* disk_read(long file_position) {
@@ -167,8 +196,12 @@ namespace btree {
 			//5-PosFile
 			//6-Keys
 
+			bool caso = false;
+			if (file_position == 34304)
+				caso = true;
+
 			int index = 0;
-			Node *result = new Node(BTree<K, R, TK, TR>::order, file_position);
+			Node *result = new Node(order, file_position);
 
 			// Move to the riquired position in file
 			fm->fileStream.seekg(file_position);
@@ -179,15 +212,15 @@ namespace btree {
 
 			// Read the count of keys of node
 			result->count = *((size_t*)(bufferNode));
-			index += 4;
+			index += sizeof(size_t);
 
 			// Read references to the childs
 			for (int i = 0; i <= result->count; i++)
 			{
 				result->branch[i] = *((long*)(bufferNode + index));
-				index += 8;
+				index += sizeof(long);
 			}
-			index += ((order) - (result->count + 1)) * 8;
+			index += ((order) - (result->count + 1)) * sizeof(long);
 
 			//Leemos la informacion satélite.(R[])
 			//byte[] subBuffer = new byte[valueSize];
@@ -202,8 +235,8 @@ namespace btree {
 			//index += (result.Satellite.Length - result.CantKeys) * valueSize;//nos saltamos los valores vacios
 
 			// Read the file_position
-			result->file_position = *((long*)(bufferNode + index));
-			index += 8;
+			//result->file_position = *((long*)(bufferNode + index));
+			//index += 8;
 
 			// Read the keys (K[])
 			char* subBuffer = new char[keySize];
@@ -296,7 +329,7 @@ namespace btree {
 			current->count++;
 
 			// Write node current in disk
-			disk_write(current);
+			//disk_write(current);
 		}
 
 		void split_node(Node *current, // node to be split
@@ -335,9 +368,9 @@ namespace btree {
 			current->count--;
 
 			// Write right_half node in disk
-			disk_write(right_half);
+			//disk_write(right_half);
 			// Write current node in disk
-			disk_write(current);
+			//disk_write(current);
 
 		}
 
@@ -386,7 +419,7 @@ namespace btree {
 			this->n--;
 
 			// Write current node in disk
-			disk_write(current);
+			//disk_write(current);
 		}
 
 		void copy_in_predecessor(Node *current, int position) {
@@ -402,7 +435,7 @@ namespace btree {
 		void restore(Node *current, int position) {
 			if (position == current->count) {// case: rightmost branch
 				// Read node current->branch[position - 1] from disk
-				auto child = get_node(current->branch[position]);
+				auto child = get_node(current->branch[position - 1]);
 				if (child->count > (order - 1) / 2)
 					move_right(current, position - 1);
 				else
@@ -417,8 +450,8 @@ namespace btree {
 					combine(current, 1);
 			}
 			else {// remaining cases: intermediate branches
-				// Read node current->branch[position] from disk
-				auto child = get_node(current->branch[position]);
+				// Read node current->branch[position - 1] from disk
+				auto child = get_node(current->branch[position - 1]);
 				if (child->count > (order - 1) / 2)
 					move_right(current, position - 1);
 				else {
@@ -449,11 +482,11 @@ namespace btree {
 			right_branch->branch[right_branch->count] = right_branch->branch[right_branch->count + 1];
 
 			// Write left_branch node in disk
-			disk_write(left_branch);
+			//disk_write(left_branch);
 			// Write right_branch node in disk
-			disk_write(right_branch);
+			//disk_write(right_branch);
 			// Write current node in disk
-			disk_write(current);
+			//disk_write(current);
 		}
 
 		void move_right(Node *current, int position) {
@@ -471,11 +504,11 @@ namespace btree {
 			current->data[position] = left_branch->data[left_branch->count];
 
 			// Write left_branch node in disk
-			disk_write(left_branch);
+			//disk_write(left_branch);
 			// Write right_branch node in disk
-			disk_write(right_branch);
+			//disk_write(right_branch);
 			// Write current node in disk
-			disk_write(current);
+			//disk_write(current);
 		}
 
 		void combine(Node *current, int position) {
@@ -500,9 +533,9 @@ namespace btree {
 			delete right_branch;
 
 			// Write left_branch node in disk
-			disk_write(left_branch);
+			//disk_write(left_branch);
 			// Write current node in disk
-			disk_write(current);
+			//disk_write(current);
 		}
 
 		// create and return a new node
@@ -516,19 +549,13 @@ namespace btree {
 			return result;
 		}
 
-		// save the btree
-		void save() {
-			disck_write(root);//La escribo aqui por si alguna casualidad no esta en RAM.
-			RAM.flush();
-		}
-
 		void calculate_node_size()
 		{
 			BTree<K, R, TK, TR>::nodeSize = /*1 +*/                                   //IsLeaf.
-				4 +                                   //count of keys (count).       
-				8 * (this->order) +                         //references to the childs (branch).
+				sizeof(size_t) +                                   //count of keys (count).       
+				sizeof(long) * (this->order) +                         //references to the childs (branch).
 				valueSize * (this->order - 1) +            //satellite info (satellite).
-				8 +                                   //position in the file (file_position).
+				//8 +                                   //position in the file (file_position).
 				keySize * (this->order - 1);                //keys of the node(Keys).
 		}
 

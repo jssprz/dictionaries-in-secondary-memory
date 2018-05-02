@@ -60,11 +60,6 @@ namespace btree {
 			fileStream.close();
 		}
 
-		// path of the file
-		//string get_path() {
-		//	return this->writer; 
-		//}
-
 		// get pointr to the beginning of the dynamic memory
 		long get_heap_start() {
 			return hs;
@@ -90,11 +85,6 @@ namespace btree {
 			blockSize = value;
 		}
 
-		// get the stram
-		//fstream get_file_stream() {
-		//	return fileStream;
-		//}
-
 		// in charge of reserving memory
 		// Returns a long where memory is free
 		long alloc() {
@@ -104,15 +94,15 @@ namespace btree {
 				return tmp; //is searched at the end of the file
 			}
 			else {
-				long tmp = this->freeMemory;
-				fileStream.seekp(this->freeMemory);
+				long tmp = freeMemory;
+				fileStream.seekg(freeMemory);
 
 				//the next free memory is read
 				char buffer[8];
 				fileStream.read(buffer, 8);
-				unsigned long next_free = *((unsigned long*)buffer);
+				long next_free = *((long*)buffer);
 
-				this->freeMemory = next_free;//the next free memory is saved
+				freeMemory = next_free;//the next free memory is saved
 
 				return tmp;//returns the free memory
 			}
@@ -131,19 +121,15 @@ namespace btree {
 
 		// In charge of saving all the necessary information.
 		void save() {
-			char* buffer = (char*)freeMemory;
-
 			//write the first free space of memory
 			fileStream.seekp(0);
-			fileStream.write(buffer, 8);
+			fileStream.write((char *)&freeMemory, sizeof(long));
 
 			//write the biginning of dynamic memory
-			buffer = (char*)hs;
-			fileStream.write(buffer, 8);
+			fileStream.write((char *)&hs, sizeof(long));
 
-			//wrte the end of the dynamic memory
-			buffer = (char*)he;
-			fileStream.write(buffer, 8);
+			//write the end of the dynamic memory
+			fileStream.write((char *)&he, sizeof(long));
 
 			fileStream.flush();//write in the file
 			fileStream.close();
@@ -158,13 +144,13 @@ namespace btree {
 
 			fileStream.seekg(0);
 			fileStream.read(buffer, 8);
-			this->freeMemory = *((long*)buffer);
+			freeMemory = *((long*)buffer);
 
 			fileStream.read(buffer, 8);
-			this->hs = *((long*)buffer);
+			hs = *((long*)buffer);
 
 			fileStream.read(buffer, 8);
-			this->he = *((long*)buffer);
+			he = *((long*)buffer);
 		}
 
 	private:

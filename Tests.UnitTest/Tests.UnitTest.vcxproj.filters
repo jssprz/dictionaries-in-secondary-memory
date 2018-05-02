@@ -32,5 +32,11 @@
     <ClCompile Include="btree-test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="exthash-test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lhash-test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

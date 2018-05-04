@@ -139,12 +139,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\common_headers\cache-memory.h" />
+    <ClInclude Include="..\common_headers\data-types.h" />
+    <ClInclude Include="..\common_headers\error-code.h" />
+    <ClInclude Include="..\common_headers\file-manager.h" />
     <ClInclude Include="b-tree-node.h" />
     <ClInclude Include="b-tree.h" />
-    <ClInclude Include="cache-memory.h" />
-    <ClInclude Include="data-types.h" />
-    <ClInclude Include="error-code.h" />
-    <ClInclude Include="file-manager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

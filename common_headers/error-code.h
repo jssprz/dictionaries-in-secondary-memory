@@ -1,12 +1,13 @@
 #pragma once
 
-namespace btree {
+namespace common {
 	
 	enum Error_code {
 		success=0,
 		not_present=1,
 		overflow=2,
-		duplicate_error=3
+		duplicate_error=3,
+		not_implemented=4
 	};
 
 	inline const char* ToString(Error_code v)

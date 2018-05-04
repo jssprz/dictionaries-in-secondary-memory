@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\common_headers">
+      <UniqueIdentifier>{ed0e4930-9005-45c8-b878-697498ca2aed}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="b-tree.h">
@@ -21,17 +24,17 @@
     <ClInclude Include="b-tree-node.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="error-code.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\common_headers\cache-memory.h">
+      <Filter>Header Files\common_headers</Filter>
     </ClInclude>
-    <ClInclude Include="file-manager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\common_headers\data-types.h">
+      <Filter>Header Files\common_headers</Filter>
     </ClInclude>
-    <ClInclude Include="cache-memory.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\common_headers\error-code.h">
+      <Filter>Header Files\common_headers</Filter>
     </ClInclude>
-    <ClInclude Include="data-types.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\common_headers\file-manager.h">
+      <Filter>Header Files\common_headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

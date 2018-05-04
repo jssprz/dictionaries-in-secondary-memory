@@ -1,9 +1,10 @@
 #pragma once
 
-namespace btree {
+namespace common {
 	template<typename T>
 	class Key {
 	public:
+		virtual long long hash() = 0;
 		virtual void load(char* buffer, size_t count) = 0;
 		virtual char* save() = 0;
 		T get_value() {

@@ -4,7 +4,7 @@
 
 using namespace std;
 
-namespace btree {
+namespace common {
 	class FileManager
 	{
 	public:

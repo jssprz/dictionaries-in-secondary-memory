@@ -1,9 +1,10 @@
 ﻿#pragma once
 
-#include "data-types.h"
+#include "../common_headers/data-types.h"
 #include <vector>
 
 using namespace std;
+using namespace common;
 
 namespace btree {
 	template <typename K, typename R, typename TK, typename TR,
@@ -13,8 +14,8 @@ namespace btree {
 	template <typename K, typename R, typename TK, typename TR>
 	class BTreeNode<K, R, TK, TR, true, true> {
 	public:
-		BTreeNode(size_t branchingFactor, long file_position)
-			: file_position(file_position), count(0), order(branchingFactor) {
+		BTreeNode(size_t branchingFactor, long file_pos)
+			: file_pos(file_pos), count(0), order(branchingFactor) {
 			data = vector<K>(branchingFactor - 1);
 			branch = vector<long>(branchingFactor, -1);
 		}
@@ -31,7 +32,7 @@ namespace btree {
 		size_t count;
 		vector<K> data;
 		vector<long> branch;
-		long file_position;
+		long file_pos;
 		size_t order;
 	};
 }

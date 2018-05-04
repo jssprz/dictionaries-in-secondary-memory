@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\common_headers">
+      <UniqueIdentifier>{ea182bef-e683-4bd2-b31e-6f419eaaa3ea}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ext-hashing.h">
@@ -20,6 +23,21 @@
     </ClInclude>
     <ClInclude Include="ext-hashing-node.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ext-hashing-page.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common_headers\cache-memory.h">
+      <Filter>Header Files\common_headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common_headers\data-types.h">
+      <Filter>Header Files\common_headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common_headers\error-code.h">
+      <Filter>Header Files\common_headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common_headers\file-manager.h">
+      <Filter>Header Files\common_headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

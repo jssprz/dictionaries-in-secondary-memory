@@ -5,23 +5,29 @@
 using namespace std;
 
 namespace extensible_hashing {
-	template<typename K>
 	class ExtensibleHashingNode
 	{
-		typedef ExtensibleHashingNode<K> Node;
 	public:
-		ExtensibleHashingNode(bool is_leaf) {
-			this->is_leaf = is_leaf;
-			this->branch = vector<Node*>(2, NULL);
-			file_page_position = -1;
+		ExtensibleHashingNode(bool is_leaf = true, long first_page_file_pos = -1, long last_page_file_pos = -1)
+			: is_leaf(is_leaf), first_page_file_pos(first_page_file_pos), last_page_file_pos(last_page_file_pos){
+			this->branch = vector<ExtensibleHashingNode*>(2, NULL);
 		}
 		~ExtensibleHashingNode() {
 
 		}
 
+		bool is_empty() {
+			return is_leaf && first_page_file_pos == -1;
+		}
+
+		bool has_only_page() {
+			return is_leaf && first_page_file_pos != -1 && first_page_file_pos == last_page_file_pos;
+		}
+
 		bool is_leaf;
-		vector<Node*> branch;
-		long file_page_position;
+		vector<ExtensibleHashingNode*> branch;
+		long first_page_file_pos;
+		long last_page_file_pos;
 
 	private:
 

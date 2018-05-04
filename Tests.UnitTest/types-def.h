@@ -1,15 +1,18 @@
 #pragma once
 
-#include <data-types.h>
+#include "../common_headers/data-types.h""
 #include <string>
 #include <vector>
 
-class KeyDef : public btree::Key<std::string> {
+using namespace std;
+using namespace common;
+
+class ADN : public Key<string> {
 public:
-	KeyDef() {
+	ADN() {
 
 	}
-	KeyDef(std::string value) {
+	ADN(string value) {
 		this->value = value;
 	}
 	char* save() {
@@ -20,21 +23,43 @@ public:
 		return result;
 	}
 	void load(char *buffer, size_t count) {
-		std::string s(buffer, count);
+		string s(buffer, count);
 		this->set_value(s);
+	}
+	long long hash() {
+		long long hash = 5381;
+		int c;
+		auto str = value.c_str();
+		while (c = *str++)
+			hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+		return hash;
+	}
+
+	static ADN generate_adn(const size_t length) {
+		string str;
+		for (size_t i = 0; i < length; ++i) {
+			str += gen_rand();
+		}
+		return ADN(str);
+	}
+
+private:
+	static char gen_rand() {
+		static const char alpha[] = "ATCG";
+		return alpha[rand() % (sizeof(alpha) - 1)];
 	}
 };
 
-class RecordDef : public btree::Record<std::string> {
+class RecordDef : public Record<string> {
 public:
 	RecordDef() {
 
 	}
-	RecordDef(std::string value) {
+	RecordDef(string value) {
 		this->value = value;
 	}
 	char* save() {
-		std::vector<char> bytes(this->value.begin(), this->value.end());
+		vector<char> bytes(this->value.begin(), this->value.end());
 		return &bytes[0];
 	}
 };

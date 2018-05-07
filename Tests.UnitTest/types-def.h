@@ -26,12 +26,19 @@ public:
 		string s(buffer, count);
 		this->set_value(s);
 	}
+	//long long hash() {
+		//long long hash = 5381;
+		//int c;
+		//auto str = value.c_str();
+		//while (c = *str++)
+		//	hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+	//}
 	long long hash() {
-		long long hash = 5381;
-		int c;
-		auto str = value.c_str();
-		while (c = *str++)
-			hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+		long long hash = 0;
+		for (int i = 0; i < value.length(); i++) {
+			//C - 01, G - 10, T - 11, A - 00
+			hash += value[i] == 'C' ? pow(2, i * 2 + 1) : value[i] == 'G' ? pow(2, i * 2) : value[i] == 'T' ? pow(2, i * 2) + pow(2, i * 2 + 1) : 0;
+		}
 		return hash;
 	}
 

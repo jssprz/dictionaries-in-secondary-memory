@@ -35,6 +35,5 @@ namespace extensible_hashing {
 		long file_pos;
 		long next_page_file_pos;
 		long prev_page_file_pos;
-		size_t order;
 	};
 }

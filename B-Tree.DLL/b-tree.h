@@ -6,6 +6,7 @@
 #include "../common_headers/file-manager.h"
 #include "../common_headers/cache-memory.h"
 #include <type_traits>
+#include <memory>
 
 using namespace common;
 
@@ -29,22 +30,22 @@ namespace btree {
 		static int valueSize; //R.Size
 
 		BTree(size_t branchingFactor, FileManager *handler, int keySize, int valueSize)
-			: root(NULL), n(0) {
+			: root(nullptr), n(0) {
 			BTree<K, R, TK, TR>::order = branchingFactor;
 			BTree<K, R, TK, TR>::fm = handler;
 			BTree<K, R, TK, TR>::keySize = keySize;
 			BTree<K, R, TK, TR>::valueSize = valueSize;
-			this->RAM = new Cache(50);
+			this->RAM = new Cache(100);
 			calculate_node_size();
 		}
 
 		BTree(size_t branchingFactor, FileManager *handler, long root_file_pos, int keySize, int valueSize)
-			: root(NULL), n(0) {
+			: root(nullptr), n(0) {
 			BTree<K, R, TK, TR>::order = branchingFactor;
 			BTree<K, R, TK, TR>::fm = handler;
 			BTree<K, R, TK, TR>::keySize = keySize;
 			BTree<K, R, TK, TR>::valueSize = valueSize;
-			this->RAM = new Cache(50);
+			this->RAM = new Cache(100);
 			calculate_node_size();
 
 			this->root = disk_read(root_file_pos);
@@ -61,7 +62,7 @@ namespace btree {
 
 		Error_code insert(const K &new_entry) {
 			K median;
-			Node *right_branch, *new_root;
+			shared_ptr<Node> right_branch, new_root;
 			Error_code result = push_down(root, new_entry, median, right_branch);
 			if (result == overflow) { // The whole tree grows in height.
 									  // Make a brand new root for the whole B-tree.
@@ -72,10 +73,10 @@ namespace btree {
 
 				new_root->count = 1;
 				new_root->data[0] = median;
-				new_root->branch[0] = root == NULL ? -1 : root->file_pos;
-				new_root->branch[1] = right_branch == NULL ? -1 : right_branch->file_pos;
+				new_root->branch[0] = root == nullptr ? -1 : root->file_pos;
+				new_root->branch[1] = right_branch == nullptr ? -1 : right_branch->file_pos;
 
-				if (root != NULL && RAM->contains(root->file_pos) == NULL)
+				if (root != nullptr && RAM->find(root->file_pos) == nullptr)
 					RAM->add(root, &disk_write);
 
 				root = new_root;
@@ -85,10 +86,9 @@ namespace btree {
 		}
 
 		Error_code remove(const K &target) {
-			Error_code result;
-			result = recursive_remove(root, target);
-			if (root != NULL && root->count == 0) { // root is now empty.
-				Node *old_root = root;
+			Error_code result = recursive_remove(root, target);
+			if (root != nullptr && root->count == 0) { // root is now empty.
+				shared_ptr<Node> old_root = root;
 
 				// Read node root->branch[0] from disk
 				root = get_node(root->branch[0]);
@@ -96,15 +96,15 @@ namespace btree {
 				// Delete old_root node
 				fm->free(old_root->file_pos);
 				RAM->remove(old_root);
-				delete old_root;
+				//delete old_root;
 			}
 			return result;
 		}
 
 		// save the btree
 		void save() {
-			if (root != NULL) {
-				disk_write(root);
+			if (root != nullptr) {
+				//disk_write(root);
 				RAM->flush(&disk_write);
 			}
 		}
@@ -113,95 +113,60 @@ namespace btree {
 			return this->n;
 		}
 
-		Node* get_node(long file_pos) {
+		shared_ptr<Node> get_node(long file_pos) {
 			if (file_pos == -1)
-				return NULL;
+				return nullptr;
 
 			auto node = RAM->find(file_pos);
-			if (node == NULL) { //if it is not in the cache
+			if (node == nullptr) { //if it is not in the cache
 				node = disk_read(file_pos);
 				RAM->add(node, &disk_write);
 			}
 			return node;
 		}
 
-		static void disk_write(Node *x) {
-			//1-IsLeaf
-			//2-CantKeys
-			//3-Children
-			//4-Satellite
-			//5-PosFile
-			//6-Keys
+		void free_node(shared_ptr<Node> x) {
+			if (x != nullptr) {
+				auto node = RAM->find(x->file_pos);
+				if (node == nullptr) //if it is not in the cache
+					delete(x);
+			}
+		}
 
-			bool caso = false;
-			if (x->file_pos == 34304)
-				caso = true;
+		static void disk_write(shared_ptr<Node> &x) {
+			//1-count
+			//2-branch
+			//3-data
 
 			fm->fileStream.seekp(x->file_pos);
 
-			//long index = 0;
-			//auto bufferNode = new char[nodeSize];
-
 			// Write the count of keys the node has
-			//strncpy(bufferNode, (char *)&(x->count), 4);
-			//index += 4;
 			fm->fileStream.write((char *)&(x->count), sizeof(size_t));
 
-			//strncpy(bufferNode + index, (char *)&(x->branch[0]), (x->count + 1) * 8);
 			// Write the references to the childs
 			for (size_t i = 0; i < x->branch.size(); i++) {
-				//long f_pos = x->branch[i];
-				//memcpy(bufferNode + index, reinterpret_cast<char * const>(&f_pos), 8);
-				//index += 8;
 				fm->fileStream.write((char *)&(x->branch[i]), sizeof(long));
 			}
-			//index += ((order) - (x->count + 1)) * 8;
-
-			////Escribimos la información satélite.(R[])
-			//for (int i = 0; i < x.CantKeys; i++)
-			//{
-			//	aux = x.Satellite[i].Save();
-			//	Array.Copy(aux, 0, bufferNode, index, valueSize);
-			//	index += valueSize;
-			//}
-			//index += (x.Satellite.Length - x.CantKeys) * valueSize;//nos saltamos los valores no asignados
-
-			// Write the file_pos of the node
-			//strncpy(bufferNode + index, (char *)&(x->file_pos), 8);
-			//index += 8;
 
 			// Write the keys (K[])
 			for (size_t i = 0; i < x->data.size(); i++) {
 				auto key = x->data[i].save();
-				//strncpy(bufferNode + index, key, keySize);
 				fm->fileStream.write(key, keySize);
 				delete[] key;
 				//index += keySize;
 			}
-			//index += (order - x->count) * keySize;
 
 			// Write info in the file
-			//fm->fileStream.seekp(x->file_pos);
-			//fm->fileStream.write(bufferNode, nodeSize);
 			fm->fileStream.flush();
-
-			//delete[] bufferNode;
 		}
 
-		static Node* disk_read(long file_pos) {
-			//1-IsLeaf
-			//2-CantKeys
-			//3-Children
-			//4-Satellite
-			//5-PosFile
-			//6-Keys
-
-			bool caso = false;
-			if (file_pos == 34304)
-				caso = true;
+		static shared_ptr<Node> disk_read(long file_pos) {
+			//1-count
+			//2-branch
+			//3-data
 
 			int index = 0;
-			Node *result = new Node(order, file_pos);
+			auto result = make_shared<Node>(order, file_pos);
 
 			// Move to the riquired position in file
 			fm->fileStream.seekg(file_pos);
@@ -222,22 +187,6 @@ namespace btree {
 			}
 			index += ((order) - (result->count + 1)) * sizeof(long);
 
-			//Leemos la informacion satélite.(R[])
-			//byte[] subBuffer = new byte[valueSize];
-			//for (int i = 0; i < result.CantKeys; i++)
-			//{
-			//	Array.Copy(bufferNode, index, subBuffer, 0, valueSize);
-			//	R valor = new R();
-			//	valor.Load(subBuffer);
-			//	result.Satellite[i] = valor;
-			//	index += valueSize;
-			//}
-			//index += (result.Satellite.Length - result.CantKeys) * valueSize;//nos saltamos los valores vacios
-
-			// Read the file_pos
-			//result->file_pos = *((long*)(bufferNode + index));
-			//index += 8;
-
 			// Read the keys (K[])
 			char* subBuffer = new char[keySize];
 			for (int i = 0; i < result->count; i++)
@@ -257,10 +206,10 @@ namespace btree {
 
 	protected:
 	private:
-		Error_code recursive_search(Node *current, K &target) {
+		Error_code recursive_search(shared_ptr<Node> &current, K &target) {
 			Error_code result = not_present;
 			size_t position;
-			if (current != NULL) {
+			if (current != nullptr) {
 				result = search_node(current, target, position);
 				if (result == not_present) {
 					// Read node current->branch[position] from disk
@@ -274,20 +223,20 @@ namespace btree {
 			return result;
 		}
 
-		Error_code search_node(Node *current, const K &target, size_t &position) {
+		Error_code search_node(shared_ptr<Node> &current, const K &target, size_t &position) {
 			position = 0;
 			while (position < current->count && target > current->data[position])
 				position++; // Perform a sequential search through the keys.
 			return position < current->count && target == current->data[position] ? success : not_present;
 		}
 
-		Error_code push_down(Node *current, const K &new_entry, K &median, Node * &right_branch) {
+		Error_code push_down(shared_ptr<Node> &current, const K &new_entry, K &median, shared_ptr<Node> &right_branch) {
 			Error_code result;
 			size_t position;
-			if (current == NULL) {
+			if (current == nullptr) {
 				// Since we cannot insert in an empty tree, the recursion terminates.
 				median = new_entry;
-				right_branch = NULL;
+				right_branch = nullptr;
 				this->n++;
 				result = overflow;
 			}
@@ -297,12 +246,12 @@ namespace btree {
 				}
 				else {*/
 				K extra_entry;
-				Node *extra_branch;
+				shared_ptr<Node> extra_branch;
 
 				// Read node current->branch[position] from disk
 				auto child = get_node(current->branch[position]);
-
 				result = push_down(child, new_entry, extra_entry, extra_branch);
+
 				if (result == overflow) {
 					// Record extra_entry now must be added to current
 					if (current->count < this->order - 1) {
@@ -318,25 +267,25 @@ namespace btree {
 			return result;
 		}
 
-		void push_in(Node *current, const K &entry, Node *right_branch, int position) {
+		void push_in(shared_ptr<Node> &current, const K &entry, shared_ptr<Node> &right_branch, int position) {
 			for (size_t i = current->count; i > position; i--) {
 				// Shift all later data to the right.
 				current->data[i] = current->data[i - 1];
 				current->branch[i + 1] = current->branch[i];
 			}
 			current->data[position] = entry;
-			current->branch[position + 1] = right_branch == NULL ? -1 : right_branch->file_pos;
+			current->branch[position + 1] = right_branch == nullptr ? -1 : right_branch->file_pos;
 			current->count++;
 
 			// Write node current in disk
 			//disk_write(current);
 		}
 
-		void split_node(Node *current, // node to be split
+		void split_node(shared_ptr<Node> &current, // node to be split
 			const K &extra_entry, // new entry to insert
-			Node *extra_branch, // subtree on right of extra_entry
+			shared_ptr<Node> &extra_branch, // subtree on right of extra_entry
 			int position, // index in node where extra_entry goes
-			Node * &right_half, // new node for right half of entries
+			shared_ptr<Node> &right_half, // new node for right half of entries
 			K &median) // median entry (in neither half)
 		{
 			//allocate new node for the right half
@@ -374,10 +323,10 @@ namespace btree {
 
 		}
 
-		Error_code recursive_remove(Node *current, const K &target) {
+		Error_code recursive_remove(shared_ptr<Node> &current, const K &target) {
 			Error_code result;
 			size_t position;
-			if (current == NULL)
+			if (current == nullptr)
 				result = not_present;
 			else {
 				if (search_node(current, target, position) == success) {
@@ -411,7 +360,7 @@ namespace btree {
 			return result;
 		}
 
-		void remove_data(Node *current, int position) {
+		void remove_data(shared_ptr<Node> &current, int position) {
 			for (int i = position; i < current->count - 1; i++)
 				current->data[i] = current->data[i + 1];
 			current->count--;
@@ -422,7 +371,7 @@ namespace btree {
 			//disk_write(current);
 		}
 
-		void copy_in_predecessor(Node *current, int position) {
+		void copy_in_predecessor(shared_ptr<Node> &current, int position) {
 			// Read node current->branch[position] from disk
 			auto leaf = get_node(current->branch[position]);
 			// First go left from the current entry.
@@ -432,7 +381,7 @@ namespace btree {
 			current->data[position] = leaf->data[leaf->count - 1];
 		}
 
-		void restore(Node *current, int position) {
+		void restore(shared_ptr<Node> &current, int position) {
 			if (position == current->count) {// case: rightmost branch
 				// Read node current->branch[position - 1] from disk
 				auto child = get_node(current->branch[position - 1]);
@@ -465,9 +414,9 @@ namespace btree {
 			}
 		}
 
-		void move_left(Node *current, int position) {
-			Node *left_branch = get_node(current->branch[position - 1]),
-				*right_branch = get_node(current->branch[position]);
+		void move_left(shared_ptr<Node> &current, int position) {
+			shared_ptr<Node> left_branch = get_node(current->branch[position - 1]),
+				right_branch = get_node(current->branch[position]);
 			left_branch->data[left_branch->count] = current->data[position - 1];
 			// Take entry from the parent.
 			left_branch->branch[++left_branch->count] = right_branch->branch[0];
@@ -489,9 +438,9 @@ namespace btree {
 			//disk_write(current);
 		}
 
-		void move_right(Node *current, int position) {
-			Node *right_branch = get_node(current->branch[position + 1]),
-				*left_branch = get_node(current->branch[position]);
+		void move_right(shared_ptr<Node> &current, int position) {
+			shared_ptr<Node> right_branch = get_node(current->branch[position + 1]),
+				left_branch = get_node(current->branch[position]);
 			right_branch->branch[right_branch->count + 1] = right_branch->branch[right_branch->count];
 			for (int i = right_branch->count; i > 0; i--) { // Make room for new entry.
 				right_branch->data[i] = right_branch->data[i - 1];
@@ -511,10 +460,10 @@ namespace btree {
 			//disk_write(current);
 		}
 
-		void combine(Node *current, int position) {
+		void combine(shared_ptr<Node> &current, int position) {
 			int i;
-			Node *left_branch = get_node(current->branch[position - 1]),
-				*right_branch = get_node(current->branch[position]);
+			shared_ptr<Node> left_branch = get_node(current->branch[position - 1]),
+				right_branch = get_node(current->branch[position]);
 			left_branch->data[left_branch->count] = current->data[position - 1];
 			left_branch->branch[++left_branch->count] = right_branch->branch[0];
 			for (i = 0; i < right_branch->count; i++) {
@@ -530,7 +479,7 @@ namespace btree {
 			// Delete right_branch node
 			fm->free(right_branch->file_pos);
 			RAM->remove(right_branch);
-			delete right_branch;
+			//delete right_branch;
 
 			// Write left_branch node in disk
 			//disk_write(left_branch);
@@ -539,9 +488,9 @@ namespace btree {
 		}
 
 		// create and return a new node
-		Node* alloc() {
+		shared_ptr<Node> alloc() {
 			long freeMemory = fm->alloc();
-			Node *result = new Node(this->order, freeMemory);
+			auto result = make_shared<Node>(this->order, freeMemory);
 
 			//Adds node to cache
 			RAM->add(result, &disk_write);
@@ -560,7 +509,7 @@ namespace btree {
 		}
 
 		// root of the btree
-		Node *root;
+		shared_ptr<Node> root;
 		// branching factor
 		static size_t order;
 		// count of keys
@@ -570,7 +519,7 @@ namespace btree {
 	};
 
 	template<typename K, typename R, typename TK, typename TR>
-	FileManager* BTree<K, R, TK, TR, true, true>::fm = NULL;
+	FileManager* BTree<K, R, TK, TR, true, true>::fm = nullptr;
 	template<typename K, typename R, typename TK, typename TR>
 	long BTree<K, R, TK, TR, true, true>::nodeSize = 0;
 	template<typename K, typename R, typename TK, typename TR>

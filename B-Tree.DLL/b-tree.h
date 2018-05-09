@@ -478,7 +478,7 @@ namespace btree {
 
 			// Delete right_branch node
 			fm->free(right_branch->file_pos);
-			RAM->remove(right_branch);
+			//RAM->remove(right_branch);
 			//delete right_branch;
 
 			// Write left_branch node in disk

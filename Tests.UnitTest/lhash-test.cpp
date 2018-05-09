@@ -9,6 +9,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
 using namespace linear_hashing;
 
+#define DATA_SIZE 1048576
 #define ADN_LENGTH 15
 #define MSG(msg) [&]{ std::wstringstream _s; _s << msg; return _s.str(); }().c_str()
 
@@ -35,16 +36,16 @@ public:
 
 	TEST_METHOD(LinearHashingImportantTest) {
 		fm = new FileManager("lhash-tests/LHashSearchEmptyTest.ehash", 512);
-		tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.5, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		vector<ADN> inserted;
 		//for i in {15,...,20}
 		int size = 0;
-		for (int i = 15; i <= 19; i++)
+		for (int i = 15; i <= 20; i++)
 			size += pow(2, i);
 		inserted.reserve(size);
-		for (int i = 15; i <= 19; i++) {
+		for (int i = 15; i <= 20; i++) {
 			//generate 2^i ADN strings
 			int count = pow(2, i);
 			for (int j = 0; j < count; j++) {
@@ -54,12 +55,12 @@ public:
 				inserted.push_back(adn);
 			}
 
-			//select 1000 random insterted ADN strings and serach each one
+			//select 2^i random insterted ADN strings and serach each one
 			random_shuffle(inserted.begin(), inserted.end());
 			for (int i = 0; i < 1000; i++)
 				Assert::AreEqual(int(success), int(tree->search(inserted[i])));
 
-			//generate 1000 random not inserted strings and search each one
+			//generate 2^i random not inserted strings and search each one
 			for (int i = 0; i < 1000; i++) {
 				auto not_adn = ADN::generate_adn(ADN_LENGTH);
 				string value = not_adn.get_value();
@@ -72,16 +73,58 @@ public:
 		//for (vector<ADN>::iterator it = inserted.begin(); it != inserted.end(); it++)
 		//	Assert::AreEqual(int(success), int(tree->remove(*it)));
 		int count_to_delete = inserted.size();
-		for (int i = 0; i < count_to_delete; i++)
+		for (int i = 0; i < count_to_delete; i++) {
 			Assert::AreEqual(int(success), int(tree->remove(inserted[i])), MSG("Element " << i << " failed removing"));
+		}
+		Assert::AreEqual(0L, tree->count());
+	}
+
+	TEST_METHOD(LinearHashingRandomDataTest) {
+		fm = new FileManager("lhash-tests/LinearHashingRandomDataTest.ehash", 512);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 8, fm, ADN_LENGTH, 0);
+		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
+
+		//map<ADN, int> inserted;
+		vector<ADN> inserted;
+		inserted.reserve(DATA_SIZE);
+		for (int i = 1; i <= DATA_SIZE; i++) {
+			auto adn = ADN::generate_adn(ADN_LENGTH);
+			//insert in the structure
+			Assert::AreEqual(int(success), int(tree->insert(adn)));
+			//inserted.insert[adn] = i;
+			inserted.push_back(adn);
+
+			if (i == 32768 || i == 65536 || i == 131072 || i == 262144 || i == 524288 || i == DATA_SIZE) {
+				//select 2^i random insterted ADN strings and serach each one
+				random_shuffle(inserted.begin(), inserted.end());
+				for (int i = 0; i < 1000; i++)
+					Assert::AreEqual(int(success), int(tree->search(inserted[i])));
+
+				//generate 2^i random not inserted strings and search each one
+				for (int i = 0; i < 1000; i++) {
+					auto not_adn = ADN::generate_adn(ADN_LENGTH);
+					string value = not_adn.get_value();
+					value[rand() % ADN_LENGTH] = 'B';
+					not_adn.set_value(value);
+					Assert::AreEqual(int(not_present), int(tree->search(not_adn)));
+				}
+			}
+		}
+
+		//for (vector<ADN>::iterator it = inserted.begin(); it != inserted.end(); it++)
+		//	Assert::AreEqual(int(success), int(tree->remove(*it)));
+		int count_to_delete = inserted.size();
+		for (int i = 0; i < count_to_delete; i++) {
+			Assert::AreEqual(int(success), int(tree->remove(inserted[i])), MSG("Element " << i << " failed removing"));
+		}
 
 		Assert::AreEqual(0L, tree->count());
 	}
 
 	TEST_METHOD(LinearHashingSearchEmptyTest) {
 		fm = new FileManager("lhash-tests/LHashSearchEmptyTest.ehash", 512);
-		tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.5, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		auto s = ADN::generate_adn(ADN_LENGTH);
 		Assert::AreEqual(int(not_present), int(tree->search(s)));
@@ -89,8 +132,8 @@ public:
 
 	TEST_METHOD(LinearHashingInsertEmptyAndSearchTest) {
 		fm = new FileManager("lhash-tests/LHashInsertEmptyAndSearchTest.ehash", 512);
-		tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.5, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		auto s = ADN::generate_adn(ADN_LENGTH);
 		Assert::AreEqual(int(success), int(tree->insert(s)));
@@ -100,8 +143,8 @@ public:
 
 	TEST_METHOD(LinearHashingInsertAndSearchTest) {
 		fm = new FileManager("lhash-tests/LHashInsertAndSearchTest.ehash", 512);
-		tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.5, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		int count = 1000000;
 		vector<ADN> data = generate_data(count);
@@ -125,8 +168,8 @@ public:
 
 	TEST_METHOD(LinearHashingInsertDulicatedSearchAndRemoveTest) {
 		fm = new FileManager("lhash-tests/LHashInsertDulicatedSearchAndRemoveTest.ehash", 512);
-		tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.5, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		auto s = ADN::generate_adn(ADN_LENGTH);
 		long i;
@@ -147,8 +190,8 @@ public:
 
 	TEST_METHOD(LinearHashingRemoveEmptyTest) {
 		fm = new FileManager("lhash-tests/LHashRemoveEmptyTest.ehash", 512);
-		tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.5, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		auto s = ADN::generate_adn(ADN_LENGTH);
 		Assert::AreEqual(int(not_present), int(tree->search(s)));
@@ -157,7 +200,7 @@ public:
 	TEST_METHOD(LinearHashingRemoveTest) {
 		fm = new FileManager("lhash-tests/LHashRemoveTest.ehash", 512);
 		tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.5, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		int count = 5000;
 		vector<ADN> data = generate_data(count);

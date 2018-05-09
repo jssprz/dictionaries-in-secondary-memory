@@ -4,6 +4,7 @@
 #include "ext-hashing.h"
 #include "types-def.h"
 #include <algorithm>    // std::random_shuffle
+#include <map>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
@@ -44,11 +45,11 @@ public:
 
 		vector<ADN> inserted;
 		//for i in {15,...,20}
-		int size = 0;
-		for (int i = 15; i <= 19; i++)
+		int i, size = 0;
+		for (i = 15; i <= 18; i++)
 			size += pow(2, i);
 		inserted.reserve(size);
-		for (int i = 15; i <= 19; i++) {
+		for (i = 15; i <= 18; i++) {
 			//generate 2^i ADN strings
 			int count = pow(2, i);
 			for (int j = 0; j < count; j++) {
@@ -58,12 +59,12 @@ public:
 				inserted.push_back(adn);
 			}
 
-			//select 1000 random insterted ADN strings and serach each one
+			//select 2^i random insterted ADN strings and serach each one
 			random_shuffle(inserted.begin(), inserted.end());
 			for (int i = 0; i < 1000; i++)
 				Assert::AreEqual(int(success), int(tree->search(inserted[i])));
 
-			//generate 1000 random not inserted strings and search each one
+			//generate 2^i random not inserted strings and search each one
 			for (int i = 0; i < 1000; i++) {
 				auto not_adn = ADN::generate_adn(ADN_LENGTH);
 				string value = not_adn.get_value();
@@ -77,15 +78,47 @@ public:
 		//	Assert::AreEqual(int(success), int(tree->remove(*it)));
 		int count_to_delete = inserted.size();
 		for (int i = 0; i < count_to_delete; i++)
-		{
-			if (i != 382275)
-				Assert::AreEqual(int(success), int(tree->remove(inserted[i])), MSG("Element " << i << " failed removing"));
-			else
-				Assert::AreEqual(int(success), int(tree->remove(inserted[i])), MSG("Element " << i << " failed removing"));
-			/*auto result = tree->remove(inserted[i]);
-			if (result == not_present)
-				result = success;*/
+			Assert::AreEqual(int(success), int(tree->remove(inserted[i])), MSG("Element " << i << " failed removing"));
+
+		Assert::AreEqual(0L, tree->count());
+	}
+
+	TEST_METHOD(ExtHashingRandomDataTest) {
+		fm = new FileManager("ehash-tests/ExtHashingRandomDataTest.ehash", 512);
+		tree = new ExtensibleHashing<ADN, RecordDef, string, string>(32, 30, fm, ADN_LENGTH, 0);
+
+		//map<ADN, int> inserted;
+		vector<ADN> inserted;
+		inserted.reserve(DATA_SIZE);
+		for (int i = 1; i <= DATA_SIZE; i++) {
+			auto adn = ADN::generate_adn(ADN_LENGTH);
+			//insert in the structure
+			Assert::AreEqual(int(success), int(tree->insert(adn)));
+			//inserted.insert[adn] = i;
+			inserted.push_back(adn);
+
+			if (i == 32768 || i == 65536 || i == 131072 || i == 262144 || i == 524288 || i == DATA_SIZE) {
+				//select 2^i random insterted ADN strings and serach each one
+				random_shuffle(inserted.begin(), inserted.end());
+				for (int i = 0; i < 1000; i++)
+					Assert::AreEqual(int(success), int(tree->search(inserted[i])));
+
+				//generate 2^i random not inserted strings and search each one
+				for (int i = 0; i < 1000; i++) {
+					auto not_adn = ADN::generate_adn(ADN_LENGTH);
+					string value = not_adn.get_value();
+					value[rand() % ADN_LENGTH] = 'B';
+					not_adn.set_value(value);
+					Assert::AreEqual(int(not_present), int(tree->search(not_adn)));
+				}
+			}
 		}
+
+		//for (vector<ADN>::iterator it = inserted.begin(); it != inserted.end(); it++)
+		//	Assert::AreEqual(int(success), int(tree->remove(*it)));
+		int count_to_delete = inserted.size();
+		for (int i = 0; i < count_to_delete; i++)
+			Assert::AreEqual(int(success), int(tree->remove(inserted[i])), MSG("Element " << i << " failed removing"));
 
 		Assert::AreEqual(0L, tree->count());
 	}

@@ -90,19 +90,15 @@ namespace linear_hashing {
 			switch (criterion)
 			{
 			case maximum_average_search_cost:
-				if (search_cost() > search_cost_thresh) { //case: the average search cost is greater than the maximum permitted
+				if (search_cost() > search_cost_thresh + 1) //case: the average search cost is greater than the maximum permitted
 					expand_page();
-				}
 				break;
 			case minimum_filled_percent:
-				if (filled_percent() < filled_percent_thresh) { //case: the filled percent of the pages is letter than the minimum permitted
+				if (filled_percent() > filled_percent_thresh + 0.1) //case: the filled percent of the pages is letter than the minimum permitted
 					expand_page();
-				}
 				break;
 			}
 
-			if (result == success)
-				n++;
 			return result;
 		}
 
@@ -119,19 +115,14 @@ namespace linear_hashing {
 			switch (criterion)
 			{
 			case maximum_average_search_cost:
-				if (search_cost() > search_cost_thresh) { //case: the average search cost is greater than the maximum permitted
+				if (p > 1 && search_cost() < search_cost_thresh - 1) //case: the average search cost is greater than the maximum permitted
 					contract_page();
-				}
 				break;
 			case minimum_filled_percent:
-				if (filled_percent() < filled_percent_thresh) { //case: the filled percent of the pages is letter than the minimum permitted
+				if (p > 1 && filled_percent() < filled_percent_thresh - 0.1) //case: the filled percent of the pages is letter than the minimum permitted
 					contract_page();
-				}
 				break;
 			}
-
-			if (result == success)
-				n--;
 
 			return result;
 		}
@@ -276,11 +267,30 @@ namespace linear_hashing {
 				count_pages[hash_table_pos]++; //increment the count of pages in the hash_table_pos bucket, necessary to calculate the search cost
 				page = new_page;
 			}
+			
 			page->data[page->count++] = new_entry;
-			
 			count_keys[hash_table_pos]++; //increment the count of keys in the hash_table_pos bucket, necessary to calculate the filled percent
-			
+			n++;
+
 			return success;
+		}
+
+		void realloc_in_page(shared_ptr<Page> &page, K &entry, int hash_table_pos) {
+			shared_ptr<Page> prev_page;
+			while (page != nullptr && page->count == max_page_count) {
+				prev_page = page;
+				page = get_page(page->next_page_file_pos);
+			}
+			if (page == nullptr) {
+				auto new_page = alloc();
+				new_page->prev_page_file_pos = prev_page->file_pos;
+				prev_page->next_page_file_pos = last_pages[hash_table_pos] = new_page->file_pos;
+				count_pages[hash_table_pos]++; //increment the count of pages in the hash_table_pos bucket, necessary to calculate the search cost
+				page = new_page;
+			}
+
+			page->data[page->count++] = entry;
+			count_keys[hash_table_pos]++; //increment the count of keys in the hash_table_pos bucket, necessary to calculate the filled percent
 		}
 
 		void expand_page() {
@@ -304,15 +314,16 @@ namespace linear_hashing {
 					auto hash = current->data[i].hash(); //calculate hash
 					size_t index = !(hash % max) ? max - 1 : hash % max - 1;
 					if (index == p - max / 2)
-						insert_in_page(realloc_page, current->data[i], p - max / 2);
+						realloc_in_page(realloc_page, current->data[i], p - max / 2);
 					else
-						insert_in_page(new_page, current->data[i], p);
+						realloc_in_page(new_page, current->data[i], p);
 				}
-				// free memory of current->file_pos
+				//free memory of current->file_pos
+				//fm->free(current->file_pos);
 				current = get_page(current->next_page_file_pos);
 			}
 			
-			if (++p == pow(2, t + 1)) //case: expansion completed
+			if (++p == max) //case: expansion completed
 				t++;
 		}
 
@@ -329,24 +340,29 @@ namespace linear_hashing {
 							shared_ptr<Page> last_page = get_page(last_pages[hash_table_pos]);
 							current_page->data[i] = last_page->data[--last_page->count];//move key of th last page, and update the last page count
 							count_keys[hash_table_pos]--;
+							n--;
 							if (last_page->count == 0) {//case: last page was left empty, must be updated the linked list links and the last_page link of the node
 								shared_ptr<Page> prev_page = get_page(last_page->prev_page_file_pos);
 								prev_page->next_page_file_pos = -1;
 								last_pages[hash_table_pos] = prev_page->file_pos;
-								//current->last_page_file_pos = prev_page->file_pos;
 								count_pages[hash_table_pos]--;
-								//free old last_page memory
+								//free space of old last_page in file
+								//fm->free(last_page->file_pos);
 							}
 						}
-						else if (first_pages[hash_table_pos] == last_pages[hash_table_pos]) {//case: the current has one only page
+						else {//case: the key to delete is in the last page
 							current_page->data[i] = current_page->data[--current_page->count];//move last key of the page, and update count
 							count_keys[hash_table_pos]--;
-
-							if (current_page->count == 0) {//case: the only page will remain empty
-								first_pages[hash_table_pos] = last_pages[hash_table_pos] = -1;
-								//current->first_page_file_pos = current->last_page_file_pos = -1;
-								count_pages[hash_table_pos] = 0;
-								//free current_page memory
+							n--;
+							if (current_page->count == 0) {
+								if (first_pages[hash_table_pos] == last_pages[hash_table_pos]) //case: the only page was left empty
+									first_pages[hash_table_pos] = last_pages[hash_table_pos] = -1;
+								else { //case: the last page was left empty, must be updated the linked list links and the last_page link of the node
+									auto prev_page = get_page(current_page->prev_page_file_pos);
+									prev_page->next_page_file_pos = -1;
+									last_pages[hash_table_pos] = prev_page->file_pos;
+								}
+								count_pages[hash_table_pos]--;
 							}
 						}
 						return success;
@@ -354,29 +370,37 @@ namespace linear_hashing {
 				}
 				current_page = get_page(current_page->next_page_file_pos);
 			}
-
 			return not_present;
 		}
 
 		void contract_page() {
-			auto page = get_page(first_pages[p - 1]);
-			
+			auto page = get_page(first_pages.back());
+
+			int realloc_index = p - pow(2, t) - 1;
+			auto realloc_page = get_page(first_pages[realloc_index]);
+			if (realloc_page != nullptr) {
+				while (page != nullptr) {
+					for (size_t i = 0; i < page->count; i++)
+						realloc_in_page(realloc_page, page->data[i], realloc_index);
+					//free space of page in the file
+					//fm->free(page->file_pos);
+					page = get_page(page->next_page_file_pos);
+				}
+			}
+			else {
+				count_pages[realloc_index] = count_pages.back();
+				count_keys[realloc_index] = count_keys.back();
+				first_pages[realloc_index] = first_pages.back();
+				last_pages[realloc_index] = last_pages.back();
+			}
+
 			// contraction
 			count_pages.pop_back();
 			count_keys.pop_back();
 			first_pages.pop_back();
 			last_pages.pop_back();
-			p--;
-			
-			int realloc_index = p - pow(2, t);
-			auto realloc_page = get_page(first_pages[realloc_index]);
-			while (page != nullptr) {
-				for (size_t i = 0; i < page->count; i++)
-					insert_in_page(realloc_page, page->data[i], realloc_index);
-				page = get_page(page->next_page_file_pos);
-			}
 
-			if (p == pow(2, t - 1)) //case: contraction completed
+			if (--p == pow(2, t)) //case: contraction completed
 				t--;
 		}
 

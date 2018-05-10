@@ -30,17 +30,17 @@ namespace extensible_hashing {
 		static int valueSize; //R.Size
 
 		ExtensibleHashing(size_t max_page_count, size_t hash_code_length, FileManager *handler, int keySize, int valueSize)
-			: n(0), hash_code_length(hash_code_length) {
-			
+			: n(0), hash_code_length(hash_code_length), max_keys_merge(2 * max_page_count / 3) {
+
 			ExtensibleHashing<K, R, TK, TR>::fm = handler;
 			ExtensibleHashing<K, R, TK, TR>::keySize = keySize;
 			ExtensibleHashing<K, R, TK, TR>::valueSize = valueSize;
 			ExtensibleHashing<K, R, TK, TR>::max_page_count = max_page_count;
-			
-			this->root = new Node();
+
+			this->root = make_shared<Node>();
 
 			this->RAM = new Cache(100);
-			
+
 			calculate_page_size();
 		}
 
@@ -61,7 +61,6 @@ namespace extensible_hashing {
 		}
 
 		~ExtensibleHashing() {
-			delete root;
 		}
 
 		//main functions
@@ -79,19 +78,13 @@ namespace extensible_hashing {
 			auto hash = new_entry.hash();//calculate hash
 			int height;
 			auto leaf = move_to_leaf(hash, height);
-			shared_ptr<Page> page = get_page(leaf->first_page_file_pos);
-			auto result = recursive_insert(leaf, height, page, new_entry);
-			if(result == success)
-				n++;
-			return result;
+			auto page = get_page(leaf->first_page_file_pos);
+			return recursive_insert(leaf, height, page, new_entry);
 		}
 
 		Error_code remove(K &target) {
 			auto hash = target.hash();
-			auto result = recursive_remove(root, target, hash, 0);
-			if (result == success)
-				n--;
-			return result;
+			return recursive_remove(root, target, hash, 0);
 		}
 
 		void save() {
@@ -103,6 +96,10 @@ namespace extensible_hashing {
 
 		long count() {
 			return this->n;
+		}
+
+		bool empty() {
+			return n == 0;
 		}
 
 		shared_ptr<Page> get_page(long file_pos) {
@@ -207,9 +204,9 @@ namespace extensible_hashing {
 			return !(masked_n >> i) ? 0 : 1;
 		}
 
-		Node* move_to_leaf(long long hash, int &height) {
+		shared_ptr<Node> move_to_leaf(long long hash, int &height) {
 			height = 0;
-			Node *current = root;
+			auto current = root;
 			while (!current->is_leaf) {
 				//get ith bit
 				int thebit = get_ith_bit(hash, height++);
@@ -228,18 +225,19 @@ namespace extensible_hashing {
 		}
 
 		Error_code search_in_page(shared_ptr<Page> &page, K &target) {
-			for (size_t i = 0; i < page->count; i++) {
+			for (size_t i = 0; i < page->count; i++)
 				if (page->data[i] == target)
 					return success;
-			}
 			return not_present;
 		}
 
-		Error_code recursive_insert(Node *current, int height, shared_ptr<Page> &page, K &new_entry) {
+		Error_code recursive_insert(shared_ptr<Node> &current, int height, shared_ptr<Page> &page, K &new_entry) {
 			if (page != nullptr) {
-				if (page->count < max_page_count) //case: the new entry can be added to leaf page
+				if (page->count < max_page_count) { //case: the new entry can be added to leaf page
 					page->data[page->count++] = new_entry;
-				else if (height < hash_code_length) {	//case: there is more bits in the hash to increase the tree
+					n++;
+				}
+				else if (height < hash_code_length) {//case: there is more bits in the hash to increase the tree
 					auto result = split_page_and_insert(current, page, height, new_entry);
 					if (result == overflow) {
 						//insert in the leaf that is full now
@@ -258,6 +256,7 @@ namespace extensible_hashing {
 						last_page->next_page_file_pos = new_last->file_pos;
 						current->last_page_file_pos = new_last->file_pos;
 					}
+					n++;
 				}
 			}
 			else {
@@ -265,11 +264,12 @@ namespace extensible_hashing {
 				new_page->data[0] = new_entry;
 				new_page->count = 1;
 				current->first_page_file_pos = current->last_page_file_pos = new_page->file_pos;
+				n++;
 			}
 			return success;
 		}
 
-		Error_code split_page_and_insert(Node *&leaf, shared_ptr<Page> &full_page, int new_height, K &new_entry) {
+		Error_code split_page_and_insert(shared_ptr<Node> &leaf, shared_ptr<Page> &full_page, int new_height, K &new_entry) {
 			leaf->is_leaf = false;
 			
 			auto data0 = new K[max_page_count], data1 = new K[max_page_count];
@@ -287,8 +287,8 @@ namespace extensible_hashing {
 
 			if (data0_count == max_page_count) {
 				delete[] data0, data1;
-				leaf->branch[0] = new Node(true, full_page->file_pos, full_page->file_pos);
-				leaf->branch[1] = new Node();
+				leaf->branch[0] = make_shared<Node>(true, full_page->file_pos, full_page->file_pos);
+				leaf->branch[1] = make_shared<Node>();
 				leaf = leaf->branch[0];
 				return overflow;
 			}
@@ -297,8 +297,8 @@ namespace extensible_hashing {
 				full_page->data = data1;
 				full_page->count = data1_count;
 
-				leaf->branch[0] = new Node();
-				leaf->branch[1] = new Node(true, full_page->file_pos, full_page->file_pos);
+				leaf->branch[0] = make_shared<Node>();
+				leaf->branch[1] = make_shared<Node>(true, full_page->file_pos, full_page->file_pos);
 				leaf = leaf->branch[1];
 				return overflow;
 			}
@@ -310,10 +310,11 @@ namespace extensible_hashing {
 				data0[data0_count++] = new_entry;
 			else
 				data1[data1_count++] = new_entry;
+			n++;
 
 			auto extra_page = alloc();
-			leaf->branch[0] = new Node(true, full_page->file_pos, full_page->file_pos);
-			leaf->branch[1] = new Node(true, extra_page->file_pos, extra_page->file_pos);
+			leaf->branch[0] = make_shared<Node>(true, full_page->file_pos, full_page->file_pos);
+			leaf->branch[1] = make_shared<Node>(true, extra_page->file_pos, extra_page->file_pos);
 
 			delete[] full_page->data, extra_page->data;
 
@@ -326,32 +327,36 @@ namespace extensible_hashing {
 			return success;
 		}
 
-		Error_code recursive_remove(Node *current, K &target, long long hash, int height) {
+		Error_code recursive_remove(shared_ptr<Node> &current, K &target, long long hash, int height) {
 			if (current->is_leaf) {
 				//find the target in the pages
-				shared_ptr<Page> current_page = get_page(current->first_page_file_pos);
+				auto current_page = get_page(current->first_page_file_pos);
 				while (current_page != nullptr) {
 					for (size_t i = 0; i < current_page->count; i++) {
 						if (current_page->data[i] == target) {
 							if (current_page->file_pos != current->last_page_file_pos) {//case: can get key of the last page
-								shared_ptr<Page> last_page = get_page(current->last_page_file_pos);
+								auto last_page = get_page(current->last_page_file_pos);
 								current_page->data[i] = last_page->data[--last_page->count];//move key of th last page, and update the last page count
-								if (last_page->count == 0) {//case: last page was left empty, must be updated the linked list links and the last_page link of the node
-									shared_ptr<Page> prev_page = get_page(last_page->prev_page_file_pos);
+								if (last_page->count == 0) {//case: the last page was left empty, must be updated the linked list links and the last_page link of the node
+									auto prev_page = get_page(last_page->prev_page_file_pos);
 									prev_page->next_page_file_pos = -1;
 									current->last_page_file_pos = prev_page->file_pos;
-									//free old last_page memory
+									RAM->remove(last_page); //so that this page is not written later
 								}
 							}
-							else if (current->first_page_file_pos == current->last_page_file_pos) {//case: the current has one only page
-								current_page->data[i] = current_page->data[--current_page->count];//move last key of the page, and update count
-
-								if (current_page->count == 0) {//case: the only page will remain empty
+							else if (current_page->count == 1) {
+								if (current->first_page_file_pos == current->last_page_file_pos) //case: the only page was left empty
 									current->first_page_file_pos = current->last_page_file_pos = -1;
-									//free current_page memory
+								else { //case: the last page was left empty, must be updated the linked list links and the last_page link of the node
+									auto prev_page = get_page(current_page->prev_page_file_pos);
+									prev_page->next_page_file_pos = -1;
+									current->last_page_file_pos = prev_page->file_pos;
 								}
-								//restore the path to the root
+								RAM->remove(current_page); //so that this page is not written later
 							}
+							else //case: the key to delete is in the last page
+								current_page->data[i] = current_page->data[--current_page->count];//move last key of the page, and update count
+							n--;
 							return success;
 						}
 					}
@@ -361,35 +366,34 @@ namespace extensible_hashing {
 			}
 			else {
 				int thebit = get_ith_bit(hash, height);
-				Node *child = current->branch[thebit];
+				auto child = current->branch[thebit];
 				auto result = recursive_remove(child, target, hash, height + 1);
 				if (result == success) {
-					Node *brother = current->branch[-(thebit - 1)];
-					if (child->is_empty() || brother->is_empty()) {//case: the new node and its brother are empty
-						current->is_leaf = true;
-						if (!child->is_empty()) {
-							current->first_page_file_pos = child->first_page_file_pos;
-							current->last_page_file_pos = child->last_page_file_pos;
+					auto brother = current->branch[-(thebit - 1)];
+					if (child->is_empty()) {
+						if (brother->is_empty()) {//case: child is empty & bro is empty
+							current->is_leaf = true;
+							current->first_page_file_pos = current->last_page_file_pos = -1;
 						}
-						if (!brother->is_empty()) {
+						else if (brother->is_leaf) {//case: child is empty & bro is leaf
+							current->is_leaf = true;
 							current->first_page_file_pos = brother->first_page_file_pos;
 							current->last_page_file_pos = brother->last_page_file_pos;
 						}
-						delete current->branch[0];
-						delete current->branch[1];
+					}
+					else if (child->is_leaf && brother->is_empty()) {//case: child is a not empty leaf & bro is empty
+						current->is_leaf = true;
+						current->first_page_file_pos = child->first_page_file_pos;
+						current->last_page_file_pos = child->last_page_file_pos;
 					}
 					else if (child->has_only_page() && brother->has_only_page()) {//case: the brother
-						shared_ptr<Page> page0 = get_page(child->first_page_file_pos);
-						shared_ptr<Page> page1 = get_page(brother->first_page_file_pos);
-						if (page0->count + page1->count < 2 * max_page_count / 3) {//case: the brother is leaf too and all keys fit in one only page
+						auto page0 = get_page(child->first_page_file_pos);
+						auto page1 = get_page(brother->first_page_file_pos);
+						if (page0->count + page1->count < max_keys_merge) {//case: the brother is leaf too and all keys fit in one only page
 							current->is_leaf = true;
-							for (size_t i = 0; i < page1->count; i++) {
+							for (size_t i = 0; i < page1->count; i++)
 								page0->data[page0->count++] = page1->data[i];
-							}
 							current->first_page_file_pos = current->last_page_file_pos = page0->file_pos;
-							delete current->branch[0];
-							delete current->branch[1];
-							//delete page1;
 						}
 					}
 				}
@@ -417,13 +421,15 @@ namespace extensible_hashing {
 		}
 
 		// root of the btree
-		Node *root;
+		shared_ptr<Node> root;
 		// count of keys
 		long n;
 		// maximum position in the hash code
 		size_t hash_code_length;
 		// maximum count of keys in a page
 		static int max_page_count;
+		// maximum count of keys needed to merge 2 pages
+		int max_keys_merge;
 		// nodes in ram
 		Cache *RAM;
 	};

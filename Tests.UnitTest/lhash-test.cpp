@@ -36,7 +36,7 @@ public:
 
 	TEST_METHOD(LinearHashingImportantTest) {
 		fm = new FileManager("lhash-tests/LHashSearchEmptyTest.ehash", 512);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 6, fm, ADN_LENGTH, 0);
 		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		vector<ADN> inserted;
@@ -81,7 +81,7 @@ public:
 
 	TEST_METHOD(LinearHashingRandomDataTest) {
 		fm = new FileManager("lhash-tests/LinearHashingRandomDataTest.ehash", 512);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 8, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 6, fm, ADN_LENGTH, 0);
 		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		//map<ADN, int> inserted;
@@ -123,7 +123,7 @@ public:
 
 	TEST_METHOD(LinearHashingSearchEmptyTest) {
 		fm = new FileManager("lhash-tests/LHashSearchEmptyTest.ehash", 512);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 6, fm, ADN_LENGTH, 0);
 		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		auto s = ADN::generate_adn(ADN_LENGTH);
@@ -132,7 +132,7 @@ public:
 
 	TEST_METHOD(LinearHashingInsertEmptyAndSearchTest) {
 		fm = new FileManager("lhash-tests/LHashInsertEmptyAndSearchTest.ehash", 512);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 6, fm, ADN_LENGTH, 0);
 		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		auto s = ADN::generate_adn(ADN_LENGTH);
@@ -143,7 +143,7 @@ public:
 
 	TEST_METHOD(LinearHashingInsertAndSearchTest) {
 		fm = new FileManager("lhash-tests/LHashInsertAndSearchTest.ehash", 512);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 6, fm, ADN_LENGTH, 0);
 		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		int count = 1000000;
@@ -168,7 +168,7 @@ public:
 
 	TEST_METHOD(LinearHashingInsertDulicatedSearchAndRemoveTest) {
 		fm = new FileManager("lhash-tests/LHashInsertDulicatedSearchAndRemoveTest.ehash", 512);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 6, fm, ADN_LENGTH, 0);
 		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		auto s = ADN::generate_adn(ADN_LENGTH);
@@ -190,7 +190,7 @@ public:
 
 	TEST_METHOD(LinearHashingRemoveEmptyTest) {
 		fm = new FileManager("lhash-tests/LHashRemoveEmptyTest.ehash", 512);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 6, fm, ADN_LENGTH, 0);
 		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		auto s = ADN::generate_adn(ADN_LENGTH);
@@ -199,8 +199,8 @@ public:
 
 	TEST_METHOD(LinearHashingRemoveTest) {
 		fm = new FileManager("lhash-tests/LHashRemoveTest.ehash", 512);
-		tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 4, fm, ADN_LENGTH, 0);
-		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
+		//tree = new LinearHashing<ADN, RecordDef, string, string>(32, maximum_average_search_cost, 6, fm, ADN_LENGTH, 0);
+		tree = new LinearHashing<ADN, RecordDef, string, string>(32, minimum_filled_percent, 0.4, fm, ADN_LENGTH, 0);
 
 		int count = 5000;
 		vector<ADN> data = generate_data(count);

@@ -6,6 +6,7 @@
 #include <../common_headers/file-manager.h>
 #include <vector>
 #include <algorithm>    // std::random_shuffle
+#include <iomanip>      // std::setprecision
 #include "io_opers.h"
 #include "timer.h"
 
@@ -98,6 +99,7 @@ namespace TestsUnitTest {
 
 		TEST_METHOD(BTreeRandomDataTest) {
 			report_file.open("btree-tests/BTreeRandomDataTest.report", ios::trunc);
+			report_file << fixed << setprecision(8);
 			fm = new FileManager("btree-tests/BTreeRandomDataTest.ehash", 1024);
 			tree = new BT(44, fm, ADN_LENGTH, 0);
 

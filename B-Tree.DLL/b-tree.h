@@ -29,6 +29,10 @@ namespace btree {
 		static int keySize;   //K.Size
 		static int valueSize; //R.Size
 
+		// data for tests
+		static int writes_count;
+		static int reads_count;
+
 		BTree(size_t branchingFactor, FileManager *handler, int keySize, int valueSize)
 			: root(nullptr), n(0) {
 			BTree<K, R, TK, TR>::order = branchingFactor;
@@ -158,6 +162,8 @@ namespace btree {
 
 			// Write info in the file
 			fm->fileStream.flush();
+
+			writes_count++;
 		}
 
 		static shared_ptr<Node> disk_read(long file_pos) {
@@ -200,6 +206,8 @@ namespace btree {
 
 			delete[] subBuffer;
 			delete[] bufferNode;
+
+			reads_count++;
 
 			return result;
 		}
@@ -528,4 +536,8 @@ namespace btree {
 	int BTree<K, R, TK, TR, true, true>::valueSize = 0;
 	template<typename K, typename R, typename TK, typename TR>
 	size_t BTree<K, R, TK, TR, true, true>::order = 10;
+	template<typename K, typename R, typename TK, typename TR>
+	int BTree<K, R, TK, TR, true, true>::reads_count = 0;
+	template<typename K, typename R, typename TK, typename TR>
+	int BTree<K, R, TK, TR, true, true>::writes_count = 0;
 }

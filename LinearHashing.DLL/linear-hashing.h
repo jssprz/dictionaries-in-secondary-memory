@@ -32,8 +32,12 @@ namespace linear_hashing {
 		static int keySize;   //K.Size
 		static int valueSize; //R.Size
 
+		// data for tests
+		static int writes_count;
+		static int reads_count;
+
 		LinearHashing(size_t max_page_count, Maintenance_criteria criterion, double criteria_param, FileManager *handler, int keySize, int valueSize)
-			: n(0), p(1), t(0), criterion(criterion){
+			: n(0), p(1), t(0), criterion(criterion), all_pages_count(1){
 
 			LinearHashing<K, R, TK, TR>::fm = handler;
 			LinearHashing<K, R, TK, TR>::keySize = keySize;
@@ -55,9 +59,25 @@ namespace linear_hashing {
 			auto initial_page = alloc();
 			first_pages.push_back(initial_page->file_pos);
 			last_pages.push_back(initial_page->file_pos);
-			count_pages.push_back(1);
 
 			calculate_page_size();
+
+			writes_count = reads_count = 0;
+		}
+
+		LinearHashing(long file_pos, FileManager *handler)
+			: n(0), p(1), t(0), criterion(criterion), all_pages_count(1) {
+
+			LinearHashing<K, R, TK, TR>::fm = handler;
+			LinearHashing<K, R, TK, TR>::keySize = keySize;
+			LinearHashing<K, R, TK, TR>::valueSize = valueSize;
+			LinearHashing<K, R, TK, TR>::max_page_count = max_page_count;
+
+			this->RAM = new Cache(100);
+
+			calculate_page_size();
+
+			read_hashing_info(file_pos);
 		}
 
 		~LinearHashing() {
@@ -89,11 +109,11 @@ namespace linear_hashing {
 			switch (criterion)
 			{
 			case maximum_average_search_cost:
-				if (search_cost() > search_cost_thresh + 1) //case: the average search cost is greater than the maximum permitted
+				if (search_cost() > 3 * search_cost_thresh / 2) //case: the average search cost is greater than the maximum permitted
 					expand_page();
 				break;
 			case minimum_filled_percent:
-				if (filled_percent() > filled_percent_thresh + 0.1) //case: the filled percent of the pages is letter than the minimum permitted
+				if (filled_percent() > 3 * filled_percent_thresh / 2) //case: the filled percent of the pages is letter than the minimum permitted
 					expand_page();
 				break;
 			}
@@ -114,11 +134,11 @@ namespace linear_hashing {
 			switch (criterion)
 			{
 			case maximum_average_search_cost:
-				if (p > 1 && search_cost() < search_cost_thresh - 1) //case: the average search cost is greater than the maximum permitted
+				if (p > 1 && search_cost() < search_cost_thresh / 2) //case: the average search cost is greater than the maximum permitted
 					contract_page();
 				break;
 			case minimum_filled_percent:
-				if (p > 1 && filled_percent() < filled_percent_thresh - 0.1) //case: the filled percent of the pages is letter than the minimum permitted
+				if (p > 1 && filled_percent() < filled_percent_thresh / 2) //case: the filled percent of the pages is letter than the minimum permitted
 					contract_page();
 				break;
 			}
@@ -126,11 +146,11 @@ namespace linear_hashing {
 			return result;
 		}
 
-		void save() {
-			/*if (root != nullptr) {
-			disk_write(root);
-			RAM->flush();
-			}*/
+		long save() {
+			RAM->flush(&disk_write);
+			long file_pos = fm->get_heap_end();
+			write_hashing_info(file_pos);
+			return file_pos;
 		}
 
 		long count() {
@@ -182,6 +202,8 @@ namespace linear_hashing {
 
 			// Write info in the file
 			fm->fileStream.flush();
+
+			writes_count++;
 		}
 
 		static shared_ptr<Page> disk_read(long file_pos) {
@@ -227,11 +249,13 @@ namespace linear_hashing {
 			delete[] subBuffer;
 			delete[] bufferNode;
 
+			reads_count++;
+
 			return result;
 		}
 
 
-	private:
+	//private: //comment this for tests
 
 		Error_code search_in_pages_list(long file_pos, K &target) {
 			auto current = get_page(file_pos);
@@ -263,7 +287,6 @@ namespace linear_hashing {
 				auto new_page = alloc();
 				new_page->prev_page_file_pos = prev_page->file_pos;
 				prev_page->next_page_file_pos = last_pages[hash_table_pos] = new_page->file_pos;
-				count_pages[hash_table_pos]++; //increment the count of pages in the hash_table_pos bucket, necessary to calculate the search cost
 				all_pages_count++;
 				page = new_page;
 			}
@@ -284,7 +307,6 @@ namespace linear_hashing {
 				auto new_page = alloc();
 				new_page->prev_page_file_pos = prev_page->file_pos;
 				prev_page->next_page_file_pos = last_pages[hash_table_pos] = new_page->file_pos;
-				count_pages[hash_table_pos]++; //increment the count of pages in the hash_table_pos bucket, necessary to calculate the search cost
 				all_pages_count++;
 				page = new_page;
 			}
@@ -295,16 +317,13 @@ namespace linear_hashing {
 		void expand_page() {
 			int max = pow(2, t + 1);
 			auto current = get_page(first_pages[p - max / 2]);
-			all_pages_count -= count_pages[p - max / 2];
 
 			auto realloc_page = alloc();
 			first_pages[p - max / 2] = last_pages[p - max / 2] = realloc_page->file_pos;
-			count_pages[p - max / 2] = 1;
 			all_pages_count++;
 
 			// expansion
 			auto new_page = alloc();
-			count_pages.push_back(1);
 			first_pages.push_back(new_page->file_pos);
 			last_pages.push_back(new_page->file_pos);
 			all_pages_count++;
@@ -320,6 +339,7 @@ namespace linear_hashing {
 				}
 				//free memory of current->file_pos
 				//fm->free(current->file_pos);
+				all_pages_count--;
 				current = get_page(current->next_page_file_pos);
 			}
 			
@@ -344,7 +364,6 @@ namespace linear_hashing {
 								shared_ptr<Page> prev_page = get_page(last_page->prev_page_file_pos);
 								prev_page->next_page_file_pos = -1;
 								last_pages[hash_table_pos] = prev_page->file_pos;
-								count_pages[hash_table_pos]--;
 								all_pages_count--;
 								//free space of old last_page in file
 								//fm->free(last_page->file_pos);
@@ -361,7 +380,6 @@ namespace linear_hashing {
 									prev_page->next_page_file_pos = -1;
 									last_pages[hash_table_pos] = prev_page->file_pos;
 								}
-								count_pages[hash_table_pos]--;
 								all_pages_count--;
 							}
 						}
@@ -385,18 +403,16 @@ namespace linear_hashing {
 						realloc_in_page(realloc_page, page->data[i], realloc_index);
 					//free space of page in the file
 					//fm->free(page->file_pos);
+					all_pages_count--;
 					page = get_page(page->next_page_file_pos);
 				}
-				all_pages_count -= count_pages.back();
 			}
 			else {
-				count_pages[realloc_index] = count_pages.back();
 				first_pages[realloc_index] = first_pages.back();
 				last_pages[realloc_index] = last_pages.back();
 			}
 
 			// contraction
-			count_pages.pop_back();
 			first_pages.pop_back();
 			last_pages.pop_back();
 
@@ -416,6 +432,7 @@ namespace linear_hashing {
 		shared_ptr<Page> alloc() {
 			long freeMemory = fm->alloc();
 			auto result = make_shared<Page>(max_page_count, keySize, freeMemory);
+			reads_count++;
 
 			//Adds page to cache
 			RAM->add(result, &disk_write);
@@ -431,12 +448,18 @@ namespace linear_hashing {
 				keySize * (max_page_count);				//keys of the node(Keys).
 		}
 
+		void write_hashing_info(long file_pos) {
+
+		}
+
+		void read_hashing_info(long file_pos) {
+
+		}
+
 		// file_pos of the first page of each pages list
 		vector<long> first_pages;
 		// file_pos of the last page of each pages list
 		vector<long> last_pages;
-		// count of pages in each pages list
-		vector<int> count_pages;
 		// total count of pages
 		long all_pages_count;
 		// count of keys
@@ -467,4 +490,8 @@ namespace linear_hashing {
 	int LinearHashing<K, R, TK, TR, true, true>::valueSize = 0;
 	template<typename K, typename R, typename TK, typename TR>
 	int LinearHashing<K, R, TK, TR, true, true>::max_page_count = 10;
+	template<typename K, typename R, typename TK, typename TR>
+	int LinearHashing<K, R, TK, TR, true, true>::reads_count = 0;
+	template<typename K, typename R, typename TK, typename TR>
+	int LinearHashing<K, R, TK, TR, true, true>::writes_count = 0;
 }

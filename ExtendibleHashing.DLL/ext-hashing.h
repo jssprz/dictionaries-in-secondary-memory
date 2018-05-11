@@ -29,6 +29,10 @@ namespace extensible_hashing {
 		static int keySize;   //K.Size
 		static int valueSize; //R.Size
 
+		// data for tests
+		static int writes_count;
+		static int reads_count;
+
 		ExtensibleHashing(size_t max_page_count, size_t hash_code_length, FileManager *handler, int keySize, int valueSize)
 			: n(0), hash_code_length(hash_code_length), max_keys_merge(2 * max_page_count / 3) {
 
@@ -42,9 +46,11 @@ namespace extensible_hashing {
 			this->RAM = new Cache(100);
 
 			calculate_page_size();
+
+			writes_count = reads_count = 0;
 		}
 
-		ExtensibleHashing(size_t max_page_count, size_t hash_code_length, FileManager *handler, long root_file_pos, int keySize, int valueSize)
+		ExtensibleHashing(long file_pos,  FileManager *handler)
 			: n(0), hash_code_length(hash_code_length) {
 			
 			ExtensibleHashing<K, R, TK, TR>::fm = handler;
@@ -57,7 +63,7 @@ namespace extensible_hashing {
 			
 			calculate_page_size();
 
-			this->root = disk_read(root_file_pos);
+			this->root = read_hashing_info(file_pos);
 		}
 
 		~ExtensibleHashing() {
@@ -87,11 +93,11 @@ namespace extensible_hashing {
 			return recursive_remove(root, target, hash, 0);
 		}
 
-		void save() {
-			/*if (root != nullptr) {
-				disk_write(root);
-				RAM->flush();
-			}*/
+		long save() {
+			RAM->flush(&disk_write);
+			long file_pos = fm->get_heap_end();
+			write_hashing_info(file_pos);
+			return file_pos;
 		}
 
 		long count() {
@@ -147,6 +153,8 @@ namespace extensible_hashing {
 
 			// Write info in the file
 			fm->fileStream.flush();
+
+			writes_count++;
 		}
 
 		static shared_ptr<Page> disk_read(long file_pos) {
@@ -191,6 +199,8 @@ namespace extensible_hashing {
 
 			delete[] subBuffer;
 			delete[] bufferNode;
+
+			reads_count++;
 
 			return result;
 		}
@@ -420,6 +430,14 @@ namespace extensible_hashing {
 				keySize * (max_page_count);				//keys of the node(Keys).
 		}
 
+		void write_hashing_info(long file_pos) {
+
+		}
+
+		void read_hashing_info(long file_pos) {
+
+		}
+
 		// root of the btree
 		shared_ptr<Node> root;
 		// count of keys
@@ -444,4 +462,8 @@ namespace extensible_hashing {
 	int ExtensibleHashing<K, R, TK, TR, true, true>::valueSize = 0;
 	template<typename K, typename R, typename TK, typename TR>
 	int ExtensibleHashing<K, R, TK, TR, true, true>::max_page_count = 10;
+	template<typename K, typename R, typename TK, typename TR>
+	int ExtensibleHashing<K, R, TK, TR, true, true>::reads_count = 0;
+	template<typename K, typename R, typename TK, typename TR>
+	int ExtensibleHashing<K, R, TK, TR, true, true>::writes_count = 0;
 }

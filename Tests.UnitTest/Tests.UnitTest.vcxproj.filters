@@ -16,6 +16,9 @@
     <Filter Include="Header Files\common">
       <UniqueIdentifier>{3a0c5f7a-df70-41a8-8196-c2f9db30e3ae}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\timers_and_io_counters">
+      <UniqueIdentifier>{ad7cbd99-1b68-4e19-ae25-5947cbf0e06f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -38,6 +41,12 @@
     </ClInclude>
     <ClInclude Include="..\common_headers\error-code.h">
       <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="io_opers.h">
+      <Filter>Header Files\timers_and_io_counters</Filter>
+    </ClInclude>
+    <ClInclude Include="timer.h">
+      <Filter>Header Files\timers_and_io_counters</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
